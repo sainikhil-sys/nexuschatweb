@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% block title %}Chat - Nexus Chat Web{% endblock %}
 {% block body %}
-<div class="chat-app" id="chatApp" data-user="{{ request.user.username }}" data-user-id="{{ request.user.id }}" {% if active_conversation %}data-conversation-id="{{ active_conversation.id }}"{% endif %}>
+<div class="chat-app" id="chatApp" data-user="{{ request.user.username }}" data-user-id="{{ request.user.id }}" {% if
+    active_conversation %}data-conversation-id="{{ active_conversation.id }}" {% endif %}>
 
 
     <aside class="sidebar" id="sidebar">
@@ -82,8 +83,7 @@
                     <div class="conv-bottom-row">
                         <p class="conv-preview">
                             {% if conv.last_message %}
-                            {% if conv.last_message.is_deleted %}<em>Message deleted</em>{% else %}{{
-                            conv.last_message.content|truncatechars:45 }}{% endif %}
+                            {% if conv.last_message.is_deleted %}<em>Message deleted</em>{% else %}{{ conv.last_message.content|truncatechars:45 }}{% endif %}
                             {% else %}No messages yet{% endif %}
                         </p>
 
@@ -117,8 +117,7 @@
                 <div>
                     <h3 id="chatHeaderName">{{ other_user.get_full_name|default:other_user.username }}</h3>
                     <p class="chat-header-status" id="chatHeaderStatus">
-                        {% if other_user.profile.is_online %}Online{% else %}Last seen {{
-                        other_user.profile.last_seen|timesince }} ago{% endif %}
+                        {% if other_user.profile.is_online %}Online{% else %}Last seen {{ other_user.profile.last_seen|timesince }} ago{% endif %}
                     </p>
                 </div>
             </a>
@@ -208,8 +207,7 @@
                     {% if msg.reactions %}
                     <div class="msg-reactions">
                         {% for emoji, users in msg.reactions.items %}
-                        <span class="reaction-chip" onclick="reactToMessage({{ msg.id }}, '{{ emoji }}')">{{ emoji }} {{
-                            users|length }}</span>
+                        <span class="reaction-chip" onclick="reactToMessage({{ msg.id }}, '{{ emoji }}')">{{ emoji }} {{ users|length }}</span>
                         {% endfor %}
                     </div>
                     {% endif %}
