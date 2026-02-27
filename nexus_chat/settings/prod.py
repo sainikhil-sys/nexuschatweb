@@ -10,7 +10,8 @@ DEBUG = False
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '.onrender.com').split(',')
-
+if '*' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.extend(['localhost', '127.0.0.1', '192.168.*.*', '10.0.*.*'])
 # -- Database (Render provides DATABASE_URL) --
 DATABASES = {
     'default': dj_database_url.config(

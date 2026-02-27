@@ -15,4 +15,5 @@ urlpatterns = [
     path('<int:conversation_id>/archive/', views.toggle_archive, name='toggle_archive'),
     path('search/', views.search_messages, name='search_messages'),
     path('archived/', views.archived_chats, name='archived_chats'),
+    path('nearby/', views.nearby_devices, name='nearby_devices'),
 ]

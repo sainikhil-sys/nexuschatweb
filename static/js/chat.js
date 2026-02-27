@@ -1,589 +1,406 @@
 /**
- * ═══════════════════════════════════════════════════════════
- *  NEXUS CHAT WEB — Chat JavaScript
- *  WebSocket connection, messaging, typing, reactions,
- *  emoji picker, media upload, message actions
- * ═══════════════════════════════════════════════════════════
+ * Nexus Chat Web - Chat JavaScript
+ * WebSocket messaging, typing indicators, emoji picker, media upload
  */
 
 (function () {
     'use strict';
 
-    // ── DOM References ──────────────────────────────────────
-    const chatApp = document.getElementById('chatApp');
-    if (!chatApp) return;
+    const app = document.getElementById('chatApp');
+    if (!app) return;
 
-    const conversationId = chatApp.dataset.conversationId;
-    const currentUser = chatApp.dataset.user;
-    const currentUserId = chatApp.dataset.userId;
-
-    if (!conversationId) return; // no active conversation
-
+    const username = app.dataset.user;
+    const userId = app.dataset.userId;
+    const conversationId = app.dataset.conversationId;
     const messagesArea = document.getElementById('messagesArea');
     const messageInput = document.getElementById('messageInput');
     const sendBtn = document.getElementById('sendBtn');
-    const typingIndicator = document.getElementById('typingIndicator');
-    const typingUser = document.getElementById('typingUser');
-    const headerStatus = document.getElementById('chatHeaderStatus');
-    const headerStatusDot = document.getElementById('headerStatusDot');
-    const emojiPicker = document.getElementById('emojiPicker');
-    const emojiGrid = document.getElementById('emojiGrid');
-    const messageSearchBar = document.getElementById('messageSearchBar');
-    const messageSearchInput = document.getElementById('messageSearchInput');
 
-    // ── WebSocket Connection ────────────────────────────────
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${window.location.host}/ws/chat/${conversationId}/`;
-    let socket = null;
-    let reconnectAttempts = 0;
-    const MAX_RECONNECT = 5;
+    let chatSocket = null;
+    let typingTimeout = null;
 
+    // ---- WebSocket Connection ----
     function connectWebSocket() {
-        socket = new WebSocket(wsUrl);
+        if (!conversationId) return;
+        const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${location.host}/ws/chat/${conversationId}/`;
+        chatSocket = new WebSocket(wsUrl);
 
-        socket.onopen = () => {
+        chatSocket.onopen = () => {
             console.log('[Nexus] WebSocket connected');
-            reconnectAttempts = 0;
         };
 
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            handleWebSocketMessage(data);
+        chatSocket.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            handleSocketMessage(data);
         };
 
-        socket.onclose = (event) => {
-            console.log('[Nexus] WebSocket closed', event.code);
-            if (reconnectAttempts < MAX_RECONNECT) {
-                setTimeout(() => {
-                    reconnectAttempts++;
-                    console.log(`[Nexus] Reconnecting... (${reconnectAttempts})`);
-                    connectWebSocket();
-                }, 2000 * reconnectAttempts);
-            }
+        chatSocket.onclose = (e) => {
+            console.log('[Nexus] WebSocket closed, reconnecting in 3s...');
+            setTimeout(connectWebSocket, 3000);
         };
 
-        socket.onerror = (err) => {
+        chatSocket.onerror = (err) => {
             console.error('[Nexus] WebSocket error:', err);
         };
     }
 
-    connectWebSocket();
-
-    // ── Handle Incoming Messages ────────────────────────────
-    function handleWebSocketMessage(data) {
+    function handleSocketMessage(data) {
         switch (data.type) {
-            case 'message':
-                appendMessage(data.message);
-                // Send read receipt for received messages
-                if (data.message.sender !== currentUser) {
-                    sendReadReceipt(data.message.id);
-                    showNotification(
-                        data.message.sender,
-                        data.message.content || '[Media]',
-                        data.message.sender_avatar
-                    );
+            case 'chat_message':
+                appendMessage(data);
+                scrollToBottom();
+                if (data.sender !== username) {
+                    showNotification(data.sender, data.content);
                 }
                 break;
-
             case 'typing':
-                showTypingIndicator(data.username, data.is_typing);
+                showTyping(data.sender);
                 break;
-
             case 'read_receipt':
-                markMessageAsRead(data.message_id);
+                markMessagesRead(data);
                 break;
-
             case 'reaction':
-                updateReaction(data.message_id, data.emoji, data.username);
+                updateReaction(data);
                 break;
-
-            case 'edited':
-                updateEditedMessage(data.message_id, data.content);
+            case 'message_edit':
+                editMessageDOM(data);
                 break;
-
-            case 'deleted':
-                markMessageDeleted(data.message_id);
+            case 'message_delete':
+                deleteMessageDOM(data);
                 break;
-
-            case 'status':
-                updateUserStatus(data.username, data.is_online);
+            case 'user_status':
+                updateUserStatus(data);
                 break;
         }
     }
 
-    // ── Send Message ────────────────────────────────────────
-    function sendMessage() {
-        const content = messageInput.value.trim();
-        if (!content || !socket || socket.readyState !== WebSocket.OPEN) return;
-
-        socket.send(JSON.stringify({
-            type: 'message',
-            content: content,
-        }));
-
-        messageInput.value = '';
-        messageInput.style.height = 'auto';
-        messageInput.focus();
-
-        // Stop typing indicator
-        sendTypingStatus(false);
-    }
-
-    // Expose globally
-    window.sendMessage = sendMessage;
-
-    // ── Key Handler ─────────────────────────────────────────
-    function handleKeyDown(event) {
-        if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault();
-            sendMessage();
-        }
-    }
-    window.handleKeyDown = handleKeyDown;
-
-    // ── Typing Indicator ────────────────────────────────────
-    let typingTimeout = null;
-    let isTyping = false;
-
-    function handleTyping() {
-        if (!isTyping) {
-            isTyping = true;
-            sendTypingStatus(true);
-        }
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-            isTyping = false;
-            sendTypingStatus(false);
-        }, 2000);
-    }
-    window.handleTyping = handleTyping;
-
-    function sendTypingStatus(typing) {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-                type: 'typing',
-                is_typing: typing,
-            }));
-        }
-    }
-
-    function showTypingIndicator(username, typing) {
-        if (typingIndicator) {
-            typingIndicator.style.display = typing ? 'flex' : 'none';
-            if (typingUser) typingUser.textContent = username;
-        }
-    }
-
-    // ── Append Message ──────────────────────────────────────
-    function appendMessage(msg) {
-        // Remove empty state
-        const emptyState = messagesArea.querySelector('.chat-empty');
+    // ---- Message Display ----
+    function appendMessage(data) {
+        const emptyState = messagesArea.querySelector('.empty-state');
         if (emptyState) emptyState.remove();
 
-        const isSent = msg.sender === currentUser;
+        const isSent = data.sender === username;
         const div = document.createElement('div');
         div.className = `message ${isSent ? 'sent' : 'received'}`;
-        div.setAttribute('data-msg-id', msg.id);
-        div.setAttribute('data-sender', msg.sender);
+        div.dataset.msgId = data.id;
+        div.dataset.sender = data.sender;
 
-        let avatarHtml = '';
-        if (!isSent) {
-            avatarHtml = `<img src="${msg.sender_avatar}" alt="" class="msg-avatar">`;
-        }
-
-        let contentHtml;
-        if (msg.message_type === 'image' && msg.media_url) {
-            contentHtml = `<div class="msg-media"><img src="${msg.media_url}" alt="Image" loading="lazy" onclick="openMediaViewer(this.src)"></div>`;
-        } else if (msg.message_type === 'video' && msg.media_url) {
-            contentHtml = `<div class="msg-media"><video src="${msg.media_url}" controls></video></div>`;
-        } else if (msg.message_type === 'document' && msg.media_url) {
-            contentHtml = `<a href="${msg.media_url}" class="msg-document" target="_blank"><span class="material-icons-round">description</span>${escapeHtml(msg.content || 'Document')}</a>`;
-        } else if (msg.message_type === 'system') {
-            contentHtml = `<p class="msg-system">${escapeHtml(msg.content)}</p>`;
+        let contentHtml = '';
+        if (data.message_type === 'image' && data.media_url) {
+            contentHtml = `<div class="msg-media"><img src="${data.media_url}" alt="Image" loading="lazy" onclick="openMediaViewer(this.src)"></div>`;
+        } else if (data.message_type === 'system') {
+            contentHtml = `<p class="msg-system">${data.content}</p>`;
         } else {
-            contentHtml = `<p class="msg-text">${escapeHtml(msg.content)}</p>`;
+            contentHtml = `<p class="msg-text">${escapeHtml(data.content)}</p>`;
         }
 
-        const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-
-        let statusHtml = '';
-        if (isSent) {
-            statusHtml = `<span class="msg-status"><span class="material-icons-round">done</span></span>`;
-        }
-
-        let actionsHtml = '';
-        if (msg.message_type !== 'system') {
-            actionsHtml = `<div class="msg-actions">
-                <button onclick="reactToMessage(${msg.id})" title="React"><span class="material-icons-round">add_reaction</span></button>
-                ${isSent ? `
-                <button onclick="editMessage(${msg.id})" title="Edit"><span class="material-icons-round">edit</span></button>
-                <button onclick="deleteMessage(${msg.id})" title="Delete"><span class="material-icons-round">delete</span></button>
-                ` : ''}
-            </div>`;
-        }
+        const time = new Date(data.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        const statusHtml = isSent
+            ? `<span class="msg-status"><span class="material-icons-round">done</span></span>`
+            : '';
 
         div.innerHTML = `
-            ${avatarHtml}
+            ${!isSent && data.sender_avatar ? `<img src="${data.sender_avatar}" alt="" class="msg-avatar">` : ''}
             <div class="msg-bubble">
                 ${contentHtml}
                 <div class="msg-meta">
                     <span class="msg-time">${time}</span>
                     ${statusHtml}
                 </div>
-                ${actionsHtml}
             </div>
         `;
 
         messagesArea.appendChild(div);
-        scrollToBottom();
     }
 
-    // ── Scroll Management ───────────────────────────────────
+    // ---- Send Message ----
+    window.sendMessage = function () {
+        if (!chatSocket || !messageInput) return;
+        const content = messageInput.value.trim();
+        if (!content) return;
+
+        chatSocket.send(JSON.stringify({
+            type: 'chat_message',
+            content: content,
+        }));
+
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+        messageInput.focus();
+    };
+
+    window.handleKeyDown = function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    };
+
+    // ---- Typing Indicator ----
+    window.handleTyping = function () {
+        if (!chatSocket) return;
+        chatSocket.send(JSON.stringify({ type: 'typing' }));
+
+        if (typingTimeout) clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => { }, 3000);
+    };
+
+    function showTyping(sender) {
+        if (sender === username) return;
+        const indicator = document.getElementById('typingIndicator');
+        const nameEl = document.getElementById('typingUser');
+        if (indicator && nameEl) {
+            nameEl.textContent = sender;
+            indicator.style.display = 'flex';
+            setTimeout(() => { indicator.style.display = 'none'; }, 3000);
+        }
+    }
+
+    // ---- Message Actions ----
+    window.reactToMessage = function (msgId, emoji) {
+        if (!chatSocket) return;
+        emoji = emoji || prompt('Enter an emoji:');
+        if (!emoji) return;
+        chatSocket.send(JSON.stringify({
+            type: 'reaction',
+            message_id: msgId,
+            emoji: emoji,
+        }));
+    };
+
+    window.editMessage = function (msgId) {
+        if (!chatSocket) return;
+        const msgEl = document.querySelector(`[data-msg-id="${msgId}"] .msg-text`);
+        if (!msgEl) return;
+        const newContent = prompt('Edit message:', msgEl.textContent);
+        if (newContent !== null && newContent.trim()) {
+            chatSocket.send(JSON.stringify({
+                type: 'edit_message',
+                message_id: msgId,
+                content: newContent.trim(),
+            }));
+        }
+    };
+
+    window.deleteMessage = function (msgId) {
+        if (!chatSocket) return;
+        if (confirm('Delete this message?')) {
+            chatSocket.send(JSON.stringify({
+                type: 'delete_message',
+                message_id: msgId,
+            }));
+        }
+    };
+
+    // ---- DOM Updates ----
+    function markMessagesRead(data) {
+        document.querySelectorAll('.message.sent .msg-status .material-icons-round').forEach(el => {
+            el.textContent = 'done_all';
+            el.classList.add('read');
+        });
+    }
+
+    function updateReaction(data) {
+        const msgEl = document.querySelector(`[data-msg-id="${data.message_id}"]`);
+        if (!msgEl) return;
+        let reactionsDiv = msgEl.querySelector('.msg-reactions');
+        if (!reactionsDiv) {
+            reactionsDiv = document.createElement('div');
+            reactionsDiv.className = 'msg-reactions';
+            msgEl.querySelector('.msg-bubble').appendChild(reactionsDiv);
+        }
+        reactionsDiv.innerHTML = '';
+        if (data.reactions) {
+            for (const [emoji, users] of Object.entries(data.reactions)) {
+                const chip = document.createElement('span');
+                chip.className = 'reaction-chip';
+                chip.textContent = `${emoji} ${users.length}`;
+                chip.onclick = () => reactToMessage(data.message_id, emoji);
+                reactionsDiv.appendChild(chip);
+            }
+        }
+    }
+
+    function editMessageDOM(data) {
+        const msgEl = document.querySelector(`[data-msg-id="${data.message_id}"] .msg-text`);
+        if (msgEl) {
+            msgEl.textContent = data.content;
+            const bubble = msgEl.closest('.msg-bubble');
+            if (!bubble.querySelector('.msg-edited-tag')) {
+                const tag = document.createElement('span');
+                tag.className = 'msg-edited-tag';
+                tag.textContent = 'edited';
+                bubble.appendChild(tag);
+            }
+        }
+    }
+
+    function deleteMessageDOM(data) {
+        const msgEl = document.querySelector(`[data-msg-id="${data.message_id}"]`);
+        if (msgEl) {
+            msgEl.classList.add('deleted');
+            const bubble = msgEl.querySelector('.msg-bubble');
+            bubble.innerHTML = '<p class="msg-deleted"><span class="material-icons-round">block</span> This message was deleted</p>';
+        }
+    }
+
+    function updateUserStatus(data) {
+        const dot = document.getElementById('headerStatusDot');
+        const status = document.getElementById('chatHeaderStatus');
+        if (dot) dot.className = `status-dot ${data.is_online ? 'online' : ''}`;
+        if (status) status.textContent = data.is_online ? 'Online' : 'Offline';
+    }
+
+    // ---- Emoji Picker ----
+    const emojis = ['😀', '😂', '😍', '🥰', '😎', '🤔', '👍', '👎', '❤️', '🔥', '🎉', '😢', '😡', '🤣', '✨', '💯', '🙏', '👋', '💪', '🤝', '😊', '🥺', '😤', '🤩', '😴', '🤮', '👀', '💀', '🫡', '🎶'];
+
+    window.toggleEmojiPicker = function () {
+        const picker = document.getElementById('emojiPicker');
+        if (!picker) return;
+        picker.style.display = picker.style.display === 'none' ? 'flex' : 'none';
+        if (picker.style.display === 'flex' && !picker.dataset.loaded) {
+            const grid = document.getElementById('emojiGrid');
+            emojis.forEach(e => {
+                const btn = document.createElement('button');
+                btn.className = 'emoji-item';
+                btn.textContent = e;
+                btn.onclick = () => {
+                    messageInput.value += e;
+                    messageInput.focus();
+                };
+                grid.appendChild(btn);
+            });
+            picker.dataset.loaded = 'true';
+        }
+    };
+
+    // ---- Message Search ----
+    window.toggleMessageSearch = function () {
+        const bar = document.getElementById('messageSearchBar');
+        if (bar) {
+            bar.style.display = bar.style.display === 'none' ? 'flex' : 'none';
+            if (bar.style.display === 'flex') bar.querySelector('input').focus();
+        }
+    };
+
+    // ---- Media Upload ----
+    window.uploadMedia = function (input) {
+        if (!input.files.length || !conversationId) return;
+        const formData = new FormData();
+        formData.append('media', input.files[0]);
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+            || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+        fetch(`/chat/${conversationId}/upload/`, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': csrfToken },
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.message) appendMessage(data.message);
+                scrollToBottom();
+            })
+            .catch(err => console.error('Upload error:', err));
+
+        input.value = '';
+    };
+
+    // ---- Utilities ----
     function scrollToBottom() {
         if (messagesArea) {
             messagesArea.scrollTop = messagesArea.scrollHeight;
         }
     }
 
-    // Initial scroll
-    scrollToBottom();
-
-    // ── Read Receipt ────────────────────────────────────────
-    function sendReadReceipt(messageId) {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-                type: 'read_receipt',
-                message_id: messageId,
-            }));
-        }
-    }
-
-    function markMessageAsRead(messageId) {
-        const msg = messagesArea.querySelector(`[data-msg-id="${messageId}"]`);
-        if (msg) {
-            const statusIcon = msg.querySelector('.msg-status .material-icons-round');
-            if (statusIcon) {
-                statusIcon.textContent = 'done_all';
-                statusIcon.classList.add('read');
-            }
-        }
-    }
-
-    // ── Reactions ───────────────────────────────────────────
-    const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
-
-    function reactToMessage(messageId, emoji) {
-        if (emoji) {
-            sendReaction(messageId, emoji);
-            return;
-        }
-        // Show quick reaction picker
-        const msg = messagesArea.querySelector(`[data-msg-id="${messageId}"]`);
-        if (!msg) return;
-
-        // Remove any existing picker
-        const existingPicker = document.querySelector('.quick-reaction-picker');
-        if (existingPicker) existingPicker.remove();
-
-        const picker = document.createElement('div');
-        picker.className = 'quick-reaction-picker';
-        picker.style.cssText = `
-            position: absolute; top: -40px; display: flex; gap: 4px;
-            background: var(--bg-secondary); border: 1px solid var(--border);
-            border-radius: 24px; padding: 4px 8px; box-shadow: var(--glass-shadow);
-            z-index: 100; animation: fadeInUp .2s;
-        `;
-
-        QUICK_EMOJIS.forEach(e => {
-            const btn = document.createElement('span');
-            btn.textContent = e;
-            btn.style.cssText = 'cursor:pointer; font-size:1.2rem; padding:4px; border-radius:50%; transition:transform .15s;';
-            btn.onmouseenter = () => btn.style.transform = 'scale(1.3)';
-            btn.onmouseleave = () => btn.style.transform = 'scale(1)';
-            btn.onclick = () => {
-                sendReaction(messageId, e);
-                picker.remove();
-            };
-            picker.appendChild(btn);
-        });
-
-        const bubble = msg.querySelector('.msg-bubble');
-        bubble.style.position = 'relative';
-        bubble.appendChild(picker);
-
-        // Auto-remove after delay
-        setTimeout(() => picker.remove(), 5000);
-    }
-    window.reactToMessage = reactToMessage;
-
-    function sendReaction(messageId, emoji) {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-                type: 'reaction',
-                message_id: messageId,
-                emoji: emoji,
-            }));
-        }
-    }
-
-    function updateReaction(messageId, emoji, username) {
-        const msg = messagesArea.querySelector(`[data-msg-id="${messageId}"]`);
-        if (!msg) return;
-
-        let reactionsDiv = msg.querySelector('.msg-reactions');
-        if (!reactionsDiv) {
-            reactionsDiv = document.createElement('div');
-            reactionsDiv.className = 'msg-reactions';
-            msg.querySelector('.msg-bubble').appendChild(reactionsDiv);
-        }
-
-        // Rebuild reaction chips (simplified)
-        let chip = reactionsDiv.querySelector(`[data-emoji="${emoji}"]`);
-        if (chip) {
-            const count = parseInt(chip.dataset.count || '1');
-            chip.dataset.count = count + 1;
-            chip.textContent = `${emoji} ${count + 1}`;
-        } else {
-            chip = document.createElement('span');
-            chip.className = 'reaction-chip';
-            chip.dataset.emoji = emoji;
-            chip.dataset.count = '1';
-            chip.textContent = `${emoji} 1`;
-            chip.onclick = () => reactToMessage(messageId, emoji);
-            reactionsDiv.appendChild(chip);
-        }
-    }
-
-    // ── Edit Message ────────────────────────────────────────
-    function editMessage(messageId) {
-        const msg = messagesArea.querySelector(`[data-msg-id="${messageId}"]`);
-        if (!msg) return;
-
-        const textEl = msg.querySelector('.msg-text');
-        if (!textEl) return;
-
-        const original = textEl.textContent;
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = original;
-        input.className = 'form-input';
-        input.style.cssText = 'font-size:.88rem; padding:6px 10px;';
-
-        input.onkeydown = (e) => {
-            if (e.key === 'Enter') {
-                const newContent = input.value.trim();
-                if (newContent && newContent !== original) {
-                    socket.send(JSON.stringify({
-                        type: 'edit',
-                        message_id: messageId,
-                        content: newContent,
-                    }));
-                }
-                textEl.textContent = newContent || original;
-                input.replaceWith(textEl);
-            } else if (e.key === 'Escape') {
-                input.replaceWith(textEl);
-            }
-        };
-
-        input.onblur = () => input.replaceWith(textEl);
-        textEl.replaceWith(input);
-        input.focus();
-        input.select();
-    }
-    window.editMessage = editMessage;
-
-    function updateEditedMessage(messageId, content) {
-        const msg = messagesArea.querySelector(`[data-msg-id="${messageId}"]`);
-        if (!msg) return;
-        const textEl = msg.querySelector('.msg-text');
-        if (textEl) textEl.textContent = content;
-
-        // Add edited tag if not present
-        if (!msg.querySelector('.msg-edited-tag')) {
-            const tag = document.createElement('span');
-            tag.className = 'msg-edited-tag';
-            tag.textContent = 'edited';
-            const bubble = msg.querySelector('.msg-bubble');
-            const meta = bubble.querySelector('.msg-meta');
-            bubble.insertBefore(tag, meta);
-        }
-    }
-
-    // ── Delete Message ──────────────────────────────────────
-    function deleteMessage(messageId) {
-        if (!confirm('Delete this message?')) return;
-
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-                type: 'delete',
-                message_id: messageId,
-            }));
-        }
-    }
-    window.deleteMessage = deleteMessage;
-
-    function markMessageDeleted(messageId) {
-        const msg = messagesArea.querySelector(`[data-msg-id="${messageId}"]`);
-        if (!msg) return;
-        msg.classList.add('deleted');
-        const bubble = msg.querySelector('.msg-bubble');
-        if (bubble) {
-            bubble.innerHTML = `
-                <p class="msg-deleted"><span class="material-icons-round">block</span> This message was deleted</p>
-                <div class="msg-meta"><span class="msg-time">${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span></div>
-            `;
-        }
-    }
-
-    // ── User Status ─────────────────────────────────────────
-    function updateUserStatus(username, isOnline) {
-        if (headerStatus && headerStatusDot) {
-            headerStatus.textContent = isOnline ? 'Online' : 'Offline';
-            if (isOnline) {
-                headerStatusDot.classList.add('online');
-            } else {
-                headerStatusDot.classList.remove('online');
-            }
-        }
-    }
-
-    // ── Emoji Picker ────────────────────────────────────────
-    const EMOJI_LIST = [
-        '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃',
-        '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙',
-        '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🫢', '🤫',
-        '🤔', '🫡', '🤐', '🤨', '😐', '😑', '😶', '🫥', '😏', '😒',
-        '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒',
-        '🤕', '🤢', '🤮', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳',
-        '🥸', '😎', '🤓', '🧐', '😕', '🫤', '😟', '🙁', '😮', '😯',
-        '😲', '😳', '🥺', '🥹', '😦', '😧', '😨', '😰', '😥', '😢',
-        '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤',
-        '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹',
-        '👍', '👎', '👏', '🙌', '🤝', '💪', '✌️', '🤞', '🤟', '🫶',
-        '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💯', '💥',
-        '⭐', '🌟', '✨', '💫', '🔥', '💎', '🎉', '🎊', '🎈', '🎁',
-    ];
-
-    function initEmojiPicker() {
-        if (!emojiGrid) return;
-        EMOJI_LIST.forEach(emoji => {
-            const span = document.createElement('span');
-            span.textContent = emoji;
-            span.onclick = () => {
-                messageInput.value += emoji;
-                messageInput.focus();
-            };
-            emojiGrid.appendChild(span);
-        });
-    }
-
-    function toggleEmojiPicker() {
-        if (emojiPicker) {
-            const isVisible = emojiPicker.style.display !== 'none';
-            emojiPicker.style.display = isVisible ? 'none' : 'block';
-        }
-    }
-    window.toggleEmojiPicker = toggleEmojiPicker;
-
-    initEmojiPicker();
-
-    // Close emoji picker on outside click
-    document.addEventListener('click', (e) => {
-        if (emojiPicker && emojiPicker.style.display === 'block') {
-            const btn = document.getElementById('emojiBtn');
-            if (!emojiPicker.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
-                emojiPicker.style.display = 'none';
-            }
-        }
-    });
-
-    // ── Message Search ──────────────────────────────────────
-    function toggleMessageSearch() {
-        if (messageSearchBar) {
-            const isVisible = messageSearchBar.style.display !== 'none';
-            messageSearchBar.style.display = isVisible ? 'none' : 'flex';
-            if (!isVisible && messageSearchInput) {
-                messageSearchInput.focus();
-            }
-        }
-    }
-    window.toggleMessageSearch = toggleMessageSearch;
-
-    if (messageSearchInput) {
-        messageSearchInput.addEventListener('input', () => {
-            const query = messageSearchInput.value.toLowerCase();
-            const msgs = messagesArea.querySelectorAll('.message');
-            msgs.forEach(msg => {
-                const text = msg.querySelector('.msg-text')?.textContent.toLowerCase() || '';
-                if (query && !text.includes(query)) {
-                    msg.style.opacity = '0.3';
-                } else {
-                    msg.style.opacity = '1';
-                }
-            });
-        });
-    }
-
-    // ── Media Upload ────────────────────────────────────────
-    function uploadMedia(input) {
-        if (!input.files || !input.files[0]) return;
-
-        const file = input.files[0];
-        const formData = new FormData();
-        formData.append('media', file);
-        formData.append('caption', file.name);
-
-        fetch(`/chat/${conversationId}/upload/`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': getCsrfToken(),
-            },
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.message) {
-                    appendMessage(data.message);
-                }
-            })
-            .catch(err => console.error('[Nexus] Upload error:', err));
-
-        input.value = '';
-    }
-    window.uploadMedia = uploadMedia;
-
-    // ── Utility ─────────────────────────────────────────────
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
 
-    function getCsrfToken() {
-        const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
-        return cookie ? cookie.split('=')[1] : '';
+    // ---- Nearby Mode ----
+    let nearbyPollInterval = null;
+
+    window.toggleNearbyModal = function () {
+        const modal = document.getElementById('nearbyModal');
+        if (!modal) return;
+
+        const isOpening = modal.style.display === 'none';
+        modal.style.display = isOpening ? 'flex' : 'none';
+
+        if (isOpening) {
+            fetchNearbyQR();
+            fetchNearbyDevices();
+            // Auto poll every 5 seconds
+            nearbyPollInterval = setInterval(fetchNearbyDevices, 5000);
+        } else {
+            if (nearbyPollInterval) clearInterval(nearbyPollInterval);
+        }
+    };
+
+    function fetchNearbyQR() {
+        fetch('/discovery/qr/')
+            .then(r => r.json())
+            .then(data => {
+                const container = document.getElementById('nearbyQrCodeContainer');
+                if (container && data.qr_image) {
+                    container.innerHTML = `<img src="${data.qr_image}" alt="Scan to connect">`;
+                    container.classList.remove('qr-placeholder');
+                }
+            })
+            .catch(err => console.error('Failed to load QR:', err));
     }
 
-    // ── Mark visible messages as read on scroll ─────────────
-    if (messagesArea) {
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const msgEl = entry.target;
-                    const msgId = msgEl.getAttribute('data-msg-id');
-                    const sender = msgEl.getAttribute('data-sender');
-                    if (sender !== currentUser && msgId) {
-                        sendReadReceipt(parseInt(msgId));
-                    }
+    window.fetchNearbyDevices = function () {
+        const btn = document.getElementById('refreshNearbyBtn');
+        if (btn) {
+            btn.innerHTML = '<span class="material-icons-round spin">sync</span> Refreshing...';
+            btn.disabled = true;
+        }
+
+        fetch('/discovery/heartbeat/')
+            .then(r => r.json())
+            .then(data => {
+                const list = document.getElementById('nearbyDeviceList');
+                if (!list) return;
+
+                if (data.devices && data.devices.length > 0) {
+                    list.innerHTML = '';
+                    data.devices.forEach(d => {
+                        list.innerHTML += `
+                            <div class="nearby-device-card">
+                                <img src="${d.avatar}" class="nearby-avatar" alt="">
+                                <div class="nearby-device-info">
+                                    <h4>${d.username}</h4>
+                                    <span class="nearby-ip">${d.device_name || 'Generic Device'} • ${d.ip}</span>
+                                </div>
+                                <a href="/chat/start/${d.user_id}/" class="btn btn-primary btn-sm">
+                                    <span class="material-icons-round">chat</span> Connect
+                                </a>
+                            </div>
+                        `;
+                    });
+                } else {
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <span class="material-icons-round">radar</span>
+                            <p>No active devices found. Make sure others have the app open on this Wi-Fi network.</p>
+                        </div>
+                    `;
+                }
+            })
+            .finally(() => {
+                if (btn) {
+                    btn.innerHTML = '<span class="material-icons-round">refresh</span> Refresh';
+                    btn.disabled = false;
                 }
             });
-        }, { root: messagesArea, threshold: 0.5 });
+    };
 
-        // Observe received messages
-        messagesArea.querySelectorAll('.message.received').forEach(msg => {
-            observer.observe(msg);
-        });
-    }
+    // ---- Init ----
+    scrollToBottom();
+    connectWebSocket();
 
 })();

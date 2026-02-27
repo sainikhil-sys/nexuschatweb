@@ -16,6 +16,11 @@ DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+# ── Clerk Authentication ────────────────────────────────────────────────────
+CLERK_PUBLISHABLE_KEY = os.environ.get('CLERK_PUBLISHABLE_KEY', '')
+CLERK_SECRET_KEY = os.environ.get('CLERK_SECRET_KEY', '')
+CLERK_WEBHOOK_SECRET = os.environ.get('CLERK_WEBHOOK_SECRET', '')
+
 # ── Installed Apps ──────────────────────────────────────────────────────────
 INSTALLED_APPS = [
     'daphne',
@@ -34,6 +39,8 @@ INSTALLED_APPS = [
     'chat.apps.ChatConfig',
     'core.apps.CoreConfig',
     'api.apps.ApiConfig',
+    'discovery',
+    'organizations',
 ]
 
 # ── Middleware ───────────────────────────────────────────────────────────────
@@ -47,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'accounts.middleware.UpdateLastSeenMiddleware',
+    'organizations.middleware.OrganizationMiddleware',
 ]
 
 ROOT_URLCONF = 'nexus_chat.urls'
@@ -62,6 +70,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'organizations.context_processors.organization_context',
             ],
         },
     },

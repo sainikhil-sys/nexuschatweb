@@ -7,6 +7,10 @@ from django.contrib.auth.models import User
 
 
 class Conversation(models.Model):
+    organization = models.ForeignKey(
+        'organizations.Organization', on_delete=models.CASCADE,
+        related_name='conversations', null=True, blank=True
+    )
     participants = models.ManyToManyField(User, related_name='conversations')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

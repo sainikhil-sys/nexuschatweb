@@ -12,10 +12,16 @@ from .models import Conversation, Message
 
 @login_required
 def chat_home(request):
-    conversations = Conversation.objects.filter(
+    qs = Conversation.objects.filter(
         participants=request.user,
         is_archived=False
-    ).annotate(
+    )
+    # Org-scope filtering
+    org = getattr(request, 'organization', None)
+    if org:
+        qs = qs.filter(organization=org)
+
+    conversations = qs.annotate(
         last_msg_time=Max('messages__timestamp'),
         msg_count=Count('messages')
     ).order_by('-is_pinned', '-last_msg_time')
@@ -28,10 +34,12 @@ def chat_home(request):
 
 @login_required
 def conversation_view(request, conversation_id):
-    conversation = get_object_or_404(
-        Conversation.objects.filter(participants=request.user),
-        id=conversation_id
-    )
+    qs = Conversation.objects.filter(participants=request.user)
+    org = getattr(request, 'organization', None)
+    if org:
+        qs = qs.filter(organization=org)
+
+    conversation = get_object_or_404(qs, id=conversation_id)
     messages_qs = conversation.messages.select_related('sender', 'sender__profile').order_by('timestamp')
 
     # Mark messages as read
@@ -40,10 +48,14 @@ def conversation_view(request, conversation_id):
     # Get other participant
     other_user = conversation.participants.exclude(id=request.user.id).first()
 
-    conversations = Conversation.objects.filter(
+    conv_qs = Conversation.objects.filter(
         participants=request.user,
         is_archived=False
-    ).annotate(
+    )
+    if org:
+        conv_qs = conv_qs.filter(organization=org)
+
+    conversations = conv_qs.annotate(
         last_msg_time=Max('messages__timestamp')
     ).order_by('-is_pinned', '-last_msg_time')
 
@@ -61,18 +73,23 @@ def start_conversation(request, user_id):
     if other_user == request.user:
         return redirect('chat:chat_home')
 
+    org = getattr(request, 'organization', None)
+
     # Check if conversation already exists
-    existing = Conversation.objects.filter(
+    qs = Conversation.objects.filter(
         participants=request.user
     ).filter(
         participants=other_user
-    ).first()
+    )
+    if org:
+        qs = qs.filter(organization=org)
+    existing = qs.first()
 
     if existing:
         return redirect('chat:conversation', conversation_id=existing.id)
 
     # Create new conversation
-    conversation = Conversation.objects.create()
+    conversation = Conversation.objects.create(organization=org)
     conversation.participants.add(request.user, other_user)
 
     # System message
@@ -166,3 +183,47 @@ def archived_chats(request):
         last_msg_time=Max('messages__timestamp')
     ).order_by('-last_msg_time')
     return render(request, 'chat/archived.html', {'conversations': conversations})
+
+
+@login_required
+def nearby_devices(request):
+    """Render nearby devices discovery page."""
+    return render(request, 'chat/nearby.html')
+
+
+@login_required
+def nearby_api(request):
+    """Find users active on the same local network."""
+    from accounts.models import UserProfile
+    from django.utils import timezone
+    import datetime
+
+    # Get current user's IP
+    user_ip = get_client_ip(request)
+
+    # Find users online in the last 5 minutes (same network heuristic)
+    cutoff = timezone.now() - datetime.timedelta(minutes=5)
+    online_profiles = UserProfile.objects.filter(
+        is_online=True,
+        last_seen__gte=cutoff,
+    ).exclude(user=request.user).select_related('user')
+
+    devices = []
+    for profile in online_profiles:
+        devices.append({
+            'user_id': profile.user.id,
+            'username': profile.user.get_full_name() or profile.user.username,
+            'avatar': profile.avatar_url,
+            'ip': user_ip.rsplit('.', 1)[0] + '.*',
+        })
+
+    return JsonResponse({'devices': devices})
+
+
+def get_client_ip(request):
+    """Extract IP from request headers."""
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded:
+        return x_forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '0.0.0.0')
+

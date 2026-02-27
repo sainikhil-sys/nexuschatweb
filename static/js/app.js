@@ -134,3 +134,73 @@ document.addEventListener('DOMContentLoaded', () => {
         textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
     });
 });
+
+// ── Onboarding & Demo Experience ────────────────────────────
+let currentOnboardingSlide = 0;
+
+function showOnboardingSlide(index) {
+    const slides = document.querySelectorAll('.onboarding-slide');
+    const dots = document.querySelectorAll('.onboarding-dots .dot');
+
+    if (!slides.length) return;
+
+    slides.forEach(s => s.classList.remove('active'));
+    dots.forEach(d => d.classList.remove('active'));
+
+    slides[index].classList.add('active');
+    dots[index].classList.add('active');
+    currentOnboardingSlide = index;
+}
+
+window.nextOnboardingSlide = function () {
+    const slides = document.querySelectorAll('.onboarding-slide');
+    if (currentOnboardingSlide < slides.length - 1) {
+        showOnboardingSlide(currentOnboardingSlide + 1);
+    }
+};
+
+window.prevOnboardingSlide = function () {
+    if (currentOnboardingSlide > 0) {
+        showOnboardingSlide(currentOnboardingSlide - 1);
+    }
+};
+
+window.goToSlide = function (index) {
+    showOnboardingSlide(index);
+};
+
+window.closeOnboarding = function () {
+    const modal = document.getElementById('onboardingModal');
+    if (modal) modal.style.display = 'none';
+    localStorage.setItem('nexus_onboarded', 'true');
+};
+
+window.playDemoVideo = function () {
+    const container = document.querySelector('.demo-video-container');
+    if (container) {
+        container.innerHTML = `
+            <div style="padding: 2rem; text-align: center; color: var(--text-dim); display:flex; flex-direction:column; justify-content:center; height:100%;">
+                <span class="material-icons-round" style="font-size: 3rem; margin-bottom: 1rem; color: var(--primary-color);">videocam</span>
+                <p>Record your demo using the provided script and place it at</p>
+                <code style="background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 5px; margin-top: 0.5rem; color: #fff;">/media/demo/nexus_demo.mp4</code>
+                <p style="margin-top: 1rem; font-size: 0.85rem;">Update app.js once recorded to play the local file!</p>
+            </div>
+        `;
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if user has seen onboarding before
+    const hasSeenOnboarding = localStorage.getItem('nexus_onboarded');
+    const modal = document.getElementById('onboardingModal');
+
+    // Only show automatically if we are on the main chat interface
+    const isChatRoute = window.location.pathname.startsWith('/chat');
+
+    if (!hasSeenOnboarding && modal && isChatRoute) {
+        // Slight delay for smooth loading experience
+        setTimeout(() => {
+            modal.style.display = 'flex';
+        }, 1000);
+    }
+});

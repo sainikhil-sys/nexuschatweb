@@ -15,6 +15,10 @@ class UserProfile(models.Model):
     bio = models.TextField(max_length=500, blank=True, default='')
     is_online = models.BooleanField(default=False)
     last_seen = models.DateTimeField(auto_now=True)
+    active_organization = models.ForeignKey(
+        'organizations.Organization', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='active_users'
+    )
     theme = models.CharField(
         max_length=10,
         choices=[('dark', 'Dark'), ('light', 'Light')],

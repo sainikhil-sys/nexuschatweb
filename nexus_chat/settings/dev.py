@@ -8,6 +8,7 @@ from .base import *  # noqa: F401,F403
 
 DEBUG = True
 
+ALLOWED_HOSTS = ['*']  # Allow all connections for local network testing
 # ── Supabase PostgreSQL Database ─────────────────────────────
 # Credentials from Supabase Dashboard → Settings → Database
 SUPABASE_HOST = os.environ.get('DB_HOST', 'db.mxgqwqlfizqicfictavu.supabase.co')

@@ -1,6 +1,6 @@
 """
 Accounts — Views
-Registration, login, logout, profile, user search, block/unblock.
+Registration, login, logout, profile, user search, block/unblock, Clerk auth.
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
@@ -9,8 +9,13 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 from .forms import RegisterForm, LoginForm, ProfileForm
 from .models import UserProfile, BlockedUser
+import json
+import hashlib
+import time
 
 
 def register_view(request):
@@ -25,7 +30,10 @@ def register_view(request):
             return redirect('chat:chat_home')
     else:
         form = RegisterForm()
-    return render(request, 'accounts/register.html', {'form': form})
+    return render(request, 'accounts/register.html', {
+        'form': form,
+        'clerk_publishable_key': settings.CLERK_PUBLISHABLE_KEY,
+    })
 
 
 def login_view(request):
@@ -41,7 +49,103 @@ def login_view(request):
             return redirect('chat:chat_home')
     else:
         form = LoginForm()
-    return render(request, 'accounts/login.html', {'form': form})
+    return render(request, 'accounts/login.html', {
+        'form': form,
+        'clerk_publishable_key': settings.CLERK_PUBLISHABLE_KEY,
+    })
+
+
+@csrf_exempt
+def clerk_callback(request):
+    """Handle Clerk webhook/callback — syncs Clerk user into Django User."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            clerk_id = data.get('id', '')
+            email = data.get('email_addresses', [{}])[0].get('email_address', '')
+            first_name = data.get('first_name', '')
+            last_name = data.get('last_name', '')
+            phone = data.get('phone_numbers', [{}])[0].get('phone_number', '')
+
+            username = email.split('@')[0] if email else f'clerk_{clerk_id[:8]}'
+
+            user, created = User.objects.get_or_create(
+                email=email if email else f'{clerk_id}@clerk.local',
+                defaults={
+                    'username': username,
+                    'first_name': first_name,
+                    'last_name': last_name,
+                }
+            )
+            if created:
+                user.set_unusable_password()
+                user.save()
+
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            return JsonResponse({'status': 'ok', 'redirect': '/chat/'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+    return redirect('accounts:login')
+
+
+@csrf_exempt
+def send_otp_view(request):
+    """Send OTP to phone (placeholder — generates server-side code)."""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        phone = data.get('phone', '')
+        if not phone:
+            return JsonResponse({'status': 'error', 'message': 'Phone required'})
+
+        # Generate a 6-digit OTP (in production, send via SMS gateway)
+        otp_seed = f"{phone}{settings.SECRET_KEY}{int(time.time() // 300)}"
+        otp = str(int(hashlib.sha256(otp_seed.encode()).hexdigest(), 16))[-6:]
+
+        # Store in session for verification
+        request.session['pending_otp'] = otp
+        request.session['pending_phone'] = phone
+
+        # In production: Send via Twilio/MSG91
+        # For demo: log to console
+        print(f"[Nexus OTP] {phone}: {otp}")
+
+        return JsonResponse({'status': 'sent', 'message': 'Verification code sent'})
+
+    return JsonResponse({'status': 'error'}, status=405)
+
+
+@csrf_exempt
+def verify_otp_view(request):
+    """Verify OTP and log in / create user."""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        otp = data.get('otp', '')
+        phone = data.get('phone', '')
+
+        expected_otp = request.session.get('pending_otp', '')
+        expected_phone = request.session.get('pending_phone', '')
+
+        if otp == expected_otp and phone == expected_phone:
+            # Find or create user by phone
+            username = f'user_{phone[-4:]}'
+            user, created = User.objects.get_or_create(
+                username=username,
+                defaults={'first_name': f'User {phone[-4:]}'}
+            )
+            if created:
+                user.set_unusable_password()
+                user.save()
+
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            del request.session['pending_otp']
+            del request.session['pending_phone']
+
+            return JsonResponse({'status': 'verified', 'redirect': '/chat/'})
+
+        return JsonResponse({'status': 'error', 'message': 'Invalid verification code'})
+
+    return JsonResponse({'status': 'error'}, status=405)
 
 
 @login_required

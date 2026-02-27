@@ -36,6 +36,18 @@
                 <span class="material-icons-round">person_add</span>
                 <span>Find People</span>
             </a>
+            {% if org_nearby_enabled %}
+            <button class="quick-action-btn" onclick="toggleNearbyModal()">
+                <span class="material-icons-round">radar</span>
+                <span>Nearby</span>
+            </button>
+            {% endif %}
+            {% if current_org %}
+            <a href="/org/dashboard/" class="quick-action-btn">
+                <span class="material-icons-round">dashboard</span>
+                <span>Admin</span>
+            </a>
+            {% endif %}
             <a href="/chat/archived/" class="quick-action-btn">
                 <span class="material-icons-round">archive</span>
                 <span>Archived</span>
@@ -74,9 +86,7 @@
                             conv.last_message.content|truncatechars:45 }}{% endif %}
                             {% else %}No messages yet{% endif %}
                         </p>
-                        {% with unread=conv.unread_count %}
-                        {% if unread %}<span class="unread-badge">{{ unread }}</span>{% endif %}
-                        {% endwith %}
+
                     </div>
                 </div>
                 {% if conv.is_pinned %}<span class="material-icons-round pin-icon">push_pin</span>{% endif %}
@@ -176,9 +186,10 @@
                         <span class="msg-time">{{ msg.timestamp|date:"g:i A" }}</span>
                         {% if msg.sender == request.user %}
                         <span class="msg-status">
-                            {% if msg.is_read %}<span class="material-icons-round read">done_all</span>{% elif
-                            msg.is_delivered %}<span class="material-icons-round">done_all</span>{% else %}<span
-                                class="material-icons-round">done</span>{% endif %}
+                            {% if msg.is_read %}<span class="material-icons-round read">done_all</span>
+                            {% elif msg.is_delivered %}<span class="material-icons-round">done_all</span>
+                            {% else %}<span class="material-icons-round">done</span>
+                            {% endif %}
                         </span>
                         {% endif %}
                     </div>
@@ -255,6 +266,108 @@
         </div>
         {% endif %}
     </main>
+</div>
+
+<!-- Nearby Mode Modal -->
+<div class="nearby-modal-overlay" id="nearbyModal" style="display:none;">
+    <div class="nearby-modal">
+        <div class="nearby-header">
+            <h3><span class="material-icons-round">radar</span> Nearby Mode</h3>
+            <button class="icon-btn" onclick="toggleNearbyModal()">
+                <span class="material-icons-round">close</span>
+            </button>
+        </div>
+
+        <div class="nearby-content">
+            <div class="nearby-radar-box">
+                <div class="radar-animation active">
+                    <div class="radar-circle"></div>
+                    <div class="radar-circle delay-1"></div>
+                    <div class="radar-circle delay-2"></div>
+                    <span class="material-icons-round radar-icon">wifi_tethering</span>
+                </div>
+                <p>Discover people on your network</p>
+                <button class="btn btn-outline btn-sm" onclick="fetchNearbyDevices()" id="refreshNearbyBtn">
+                    <span class="material-icons-round">refresh</span> Refresh
+                </button>
+            </div>
+
+            <div class="nearby-qr-box">
+                <h4>Let others scan to join you</h4>
+                <div id="nearbyQrCodeContainer" class="qr-placeholder">
+                    <span class="material-icons-round spin">sync</span> Loading QR...
+                </div>
+            </div>
+
+            <div class="nearby-list">
+                <h4>Active Nearby Devices</h4>
+                <div id="nearbyDeviceList">
+                    <div class="empty-state">
+                        <span class="material-icons-round spin">sync</span>
+                        <p>Scanning network...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Onboarding & Demo Video Modal -->
+<div class="onboarding-modal-overlay" id="onboardingModal" style="display:none;">
+    <div class="onboarding-modal">
+        <button class="icon-btn onboarding-close" onclick="closeOnboarding()">
+            <span class="material-icons-round">close</span>
+        </button>
+
+        <div class="onboarding-slides" id="onboardingSlides">
+            <!-- Slide 1: Welcome -->
+            <div class="onboarding-slide active">
+                <div class="slide-icon"><span class="material-icons-round">forum</span></div>
+                <h2>Welcome to Nexus Chat</h2>
+                <p>A premium real-time communication platform built for secure, instant, and beautiful messaging.</p>
+                <button class="btn btn-primary mt-1" onclick="nextOnboardingSlide()">Next Step <span
+                        class="material-icons-round">arrow_forward</span></button>
+            </div>
+
+            <!-- Slide 2: Nearby Mode -->
+            <div class="onboarding-slide">
+                <div class="slide-icon"><span class="material-icons-round">radar</span></div>
+                <h2>Nearby Offline Mode</h2>
+                <p>Chat with devices on the same Wi-Fi network instantly without routing through the internet. Just
+                    click the Nearby button and scan the QR code!</p>
+                <div class="slide-actions">
+                    <button class="btn btn-outline" onclick="prevOnboardingSlide()">Back</button>
+                    <button class="btn btn-primary" onclick="nextOnboardingSlide()">Next Step <span
+                            class="material-icons-round">arrow_forward</span></button>
+                </div>
+            </div>
+
+            <!-- Slide 3: Demo Video -->
+            <div class="onboarding-slide">
+                <div class="slide-icon"><span class="material-icons-round">play_circle</span></div>
+                <h2>See it in Action</h2>
+                <p>Watch a quick 2-minute demonstration of all the platform features.</p>
+                <div class="demo-video-container">
+                    <!-- Placeholder for demo video embed (e.g. YouTube iframe) -->
+                    <div class="video-placeholder" onclick="playDemoVideo()">
+                        <span class="material-icons-round play-btn">play_arrow</span>
+                        <span>Play Feature Demo</span>
+                    </div>
+                </div>
+                <div class="slide-actions mt-1">
+                    <button class="btn btn-outline" onclick="prevOnboardingSlide()">Back</button>
+                    <button class="btn btn-primary" onclick="closeOnboarding()">Get Started <span
+                            class="material-icons-round">check</span></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="onboarding-dots" id="onboardingDots">
+            <span class="dot active" onclick="goToSlide(0)"></span>
+            <span class="dot" onclick="goToSlide(1)"></span>
+            <span class="dot" onclick="goToSlide(2)"></span>
+        </div>
+    </div>
 </div>
 
 <div class="media-viewer" id="mediaViewer" style="display:none;" onclick="closeMediaViewer()">

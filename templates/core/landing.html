@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Nexus Chat Web — Connect Instantly{% endblock %}
+{% block title %}{{ org_name }} — Secure Enterprise Communication Platform{% endblock %}
 
 {% block body %}
 <div class="landing-page">
@@ -13,7 +13,7 @@
     <nav class="landing-nav">
         <div class="landing-logo">
             <span class="material-icons-round">hub</span>
-            <span class="logo-text">Nexus Chat</span>
+            <span class="logo-text">{{ org_name }}</span>
         </div>
         <div class="landing-nav-links">
             <a href="/accounts/login/" class="btn btn-ghost">Sign In</a>
@@ -23,21 +23,25 @@
 
     <main class="landing-hero">
         <div class="hero-badge animate-fade-in">
-            <span class="material-icons-round">bolt</span>
-            Real-time messaging platform
+            <span class="material-icons-round">verified</span>
+            Enterprise Communication Platform
         </div>
         <h1 class="hero-title animate-fade-in-up">
-            Chat Without<br>
-            <span class="gradient-text">Boundaries</span>
+            Communicate<br>
+            <span class="gradient-text">Without Limits</span>
         </h1>
         <p class="hero-subtitle animate-fade-in-up delay-1">
-            Experience seamless communication with end-to-end messaging,
-            real-time presence, media sharing, and nearby device discovery.
+            A secure, multi-tenant communication platform for organizations,
+            colleges, and teams. Online and offline. Cloud or on-premise.
         </p>
         <div class="hero-actions animate-fade-in-up delay-2">
-            <a href="/accounts/register/" class="btn btn-primary btn-lg">
-                <span class="material-icons-round">rocket_launch</span>
-                Start Chatting
+            <a href="/org/register/" class="btn btn-primary btn-lg">
+                <span class="material-icons-round">business</span>
+                Create Organization
+            </a>
+            <a href="/accounts/register/" class="btn btn-ghost btn-lg">
+                <span class="material-icons-round">person_add</span>
+                Join as User
             </a>
             <a href="#features" class="btn btn-ghost btn-lg">
                 <span class="material-icons-round">explore</span>
@@ -48,66 +52,132 @@
         <!-- Feature preview cards -->
         <div class="hero-preview animate-fade-in-up delay-3">
             <div class="preview-card glass-card">
-                <div class="preview-icon"><span class="material-icons-round">chat</span></div>
-                <h3>Real-time Chat</h3>
-                <p>Instant messaging with typing indicators and read receipts</p>
+                <div class="preview-icon"><span class="material-icons-round">domain</span></div>
+                <h3>Multi-Tenant</h3>
+                <p>Isolated workspaces for each organization with full data separation</p>
             </div>
             <div class="preview-card glass-card">
                 <div class="preview-icon"><span class="material-icons-round">wifi</span></div>
                 <h3>Nearby Mode</h3>
-                <p>Connect with devices on the same network — no internet needed</p>
+                <p>LAN-based communication — works without internet on local networks</p>
             </div>
             <div class="preview-card glass-card">
-                <div class="preview-icon"><span class="material-icons-round">shield</span></div>
-                <h3>Secure</h3>
-                <p>Built with security best practices and data protection</p>
+                <div class="preview-icon"><span class="material-icons-round">admin_panel_settings</span></div>
+                <h3>Admin Dashboard</h3>
+                <p>Analytics, user management, branding, and feature controls</p>
             </div>
             <div class="preview-card glass-card">
                 <div class="preview-icon"><span class="material-icons-round">palette</span></div>
-                <h3>Premium UI</h3>
-                <p>Beautiful glassmorphism design with dark and light themes</p>
+                <h3>White-Label</h3>
+                <p>Custom logos, colors, and branding for each organization</p>
             </div>
         </div>
     </main>
 
+    <!-- Use Cases Section -->
+    <section class="landing-features" style="margin-top: 60px;">
+        <h2 class="section-title">Built For Every Organization</h2>
+        <div class="features-grid">
+            <div class="feature-item glass-card">
+                <span class="material-icons-round feature-icon">school</span>
+                <h3>Colleges & Universities</h3>
+                <p>Department channels, student-faculty messaging, campus-wide announcements</p>
+            </div>
+            <div class="feature-item glass-card">
+                <span class="material-icons-round feature-icon">business</span>
+                <h3>Companies & Startups</h3>
+                <p>Team collaboration, project channels, secure file sharing for businesses</p>
+            </div>
+            <div class="feature-item glass-card">
+                <span class="material-icons-round feature-icon">groups</span>
+                <h3>Coaching Institutes</h3>
+                <p>Batch communication, doubt resolution, resource sharing for educators</p>
+            </div>
+            <div class="feature-item glass-card">
+                <span class="material-icons-round feature-icon">event</span>
+                <h3>Events & Conferences</h3>
+                <p>Nearby discovery for attendees, instant networking, real-time coordination</p>
+            </div>
+            <div class="feature-item glass-card">
+                <span class="material-icons-round feature-icon">health_and_safety</span>
+                <h3>Healthcare & NGOs</h3>
+                <p>HIPAA-friendly architecture, on-premise hosting, data privacy compliance</p>
+            </div>
+            <div class="feature-item glass-card">
+                <span class="material-icons-round feature-icon">apartment</span>
+                <h3>Government & Enterprises</h3>
+                <p>Air-gapped LAN support, audit logging, role-based access controls</p>
+            </div>
+        </div>
+    </section>
+
     <section id="features" class="landing-features">
-        <h2 class="section-title">Everything You Need</h2>
+        <h2 class="section-title">Platform Features</h2>
         <div class="features-grid">
             <div class="feature-item glass-card">
                 <span class="material-icons-round feature-icon">mark_chat_read</span>
-                <h3>Message Status</h3>
-                <p>Delivered & read receipts with real-time updates</p>
+                <h3>Real-Time Messaging</h3>
+                <p>WebSocket-powered instant messaging with typing indicators and read receipts</p>
             </div>
             <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">add_reaction</span>
-                <h3>Emoji & Reactions</h3>
-                <p>Express yourself with emojis and message reactions</p>
+                <span class="material-icons-round feature-icon">radar</span>
+                <h3>Nearby Discovery</h3>
+                <p>Auto-detect and connect with devices on the same network without internet</p>
             </div>
             <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">attach_file</span>
-                <h3>Media Sharing</h3>
-                <p>Share images, videos, documents, and voice notes</p>
+                <span class="material-icons-round feature-icon">qr_code_scanner</span>
+                <h3>QR Pairing</h3>
+                <p>Scan QR codes to instantly pair with nearby devices for secure chat</p>
             </div>
             <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">search</span>
-                <h3>Search</h3>
-                <p>Find messages, users, and conversations instantly</p>
+                <span class="material-icons-round feature-icon">analytics</span>
+                <h3>Admin Analytics</h3>
+                <p>Message volume charts, user engagement, storage usage dashboards</p>
             </div>
             <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">notifications_active</span>
-                <h3>Notifications</h3>
-                <p>Browser & push notifications for new messages</p>
+                <span class="material-icons-round feature-icon">security</span>
+                <h3>Role-Based Access</h3>
+                <p>Owner, Admin, Moderator, and Member roles with granular permissions</p>
             </div>
             <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">dark_mode</span>
-                <h3>Themes</h3>
-                <p>Dark and light modes with smooth transitions</p>
+                <span class="material-icons-round feature-icon">brush</span>
+                <h3>Custom Branding</h3>
+                <p>Upload logos, set theme colors, and customize the app name per organization</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="landing-features">
+        <h2 class="section-title">Simple Pricing</h2>
+        <div class="features-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+            <div class="feature-item glass-card" style="text-align: center; padding: 36px 24px;">
+                <span class="badge badge-free" style="margin-bottom: 12px;">Free</span>
+                <h3 style="font-size: 1.8rem; margin: 12px 0;">₹0<span
+                        style="font-size: .8rem; color: var(--text-muted);">/month</span></h3>
+                <p>Up to 25 users<br>500 MB storage<br>Basic features<br>Community support</p>
+                <a href="/org/register/" class="btn btn-ghost" style="margin-top: 16px;">Start Free</a>
+            </div>
+            <div class="feature-item glass-card"
+                style="text-align: center; padding: 36px 24px; border: 2px solid var(--accent);">
+                <span class="badge badge-pro" style="margin-bottom: 12px;">Pro</span>
+                <h3 style="font-size: 1.8rem; margin: 12px 0;">₹999<span
+                        style="font-size: .8rem; color: var(--text-muted);">/month</span></h3>
+                <p>Up to 200 users<br>10 GB storage<br>Nearby Mode + QR<br>Priority support</p>
+                <a href="/org/register/" class="btn btn-primary" style="margin-top: 16px;">Get Pro</a>
+            </div>
+            <div class="feature-item glass-card" style="text-align: center; padding: 36px 24px;">
+                <span class="badge badge-enterprise" style="margin-bottom: 12px;">Enterprise</span>
+                <h3 style="font-size: 1.8rem; margin: 12px 0;">Custom<span
+                        style="font-size: .8rem; color: var(--text-muted);"> pricing</span></h3>
+                <p>Unlimited users<br>Unlimited storage<br>On-premise hosting<br>Dedicated support</p>
+                <a href="mailto:contact@nexuschat.io" class="btn btn-ghost" style="margin-top: 16px;">Contact Sales</a>
             </div>
         </div>
     </section>
 
     <footer class="landing-footer">
-        <p>&copy; 2026 Nexus Chat Web. Built with Django & Channels.</p>
+        <p>&copy; 2026 {{ org_name }}. Enterprise Communication Platform. Built with Django & Channels.</p>
     </footer>
 </div>
 {% endblock %}
