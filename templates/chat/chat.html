@@ -1,8 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Chat - Nexus Chat Web{% endblock %}
 {% block body %}
-<div class="chat-app" id="chatApp" data-user="{{ request.user.username }}" data-user-id="{{ request.user.id }}" {% if
-    active_conversation %}data-conversation-id="{{ active_conversation.id }}" {% endif %}>
+<div class="chat-app" id="chatApp" data-user="{{ request.user.username }}" data-user-id="{{ request.user.id }}" {% if active_conversation %}data-conversation-id="{{ active_conversation.id }}" {% endif %}>
 
 
     <aside class="sidebar" id="sidebar">
