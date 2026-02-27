@@ -24,6 +24,7 @@ class UserProfile(models.Model):
         choices=[('dark', 'Dark'), ('light', 'Light')],
         default='dark'
     )
+    phone_number = models.CharField(max_length=20, blank=True, default='', db_index=True)
 
     def __str__(self):
         return f'{self.user.username}'

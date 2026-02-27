@@ -11,3 +11,4 @@ whitenoise>=6.5
 dj-database-url>=2.1
 gunicorn>=21.2
 qrcode[pil]>=7.4.2
+twilio>=9.0

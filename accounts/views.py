@@ -1,6 +1,6 @@
 """
 Accounts — Views
-Registration, login, logout, profile, user search, block/unblock, Clerk auth.
+Registration, login, logout, profile, user search, block/unblock, Clerk auth, Twilio OTP.
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
@@ -14,8 +14,11 @@ from django.conf import settings
 from .forms import RegisterForm, LoginForm, ProfileForm
 from .models import UserProfile, BlockedUser
 import json
-import hashlib
+import random
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def register_view(request):
@@ -91,61 +94,107 @@ def clerk_callback(request):
 
 @csrf_exempt
 def send_otp_view(request):
-    """Send OTP to phone (placeholder — generates server-side code)."""
-    if request.method == 'POST':
+    """Send a 6-digit OTP to a phone number via Twilio SMS."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error'}, status=405)
+
+    try:
         data = json.loads(request.body)
-        phone = data.get('phone', '')
-        if not phone:
-            return JsonResponse({'status': 'error', 'message': 'Phone required'})
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid request'})
 
-        # Generate a 6-digit OTP (in production, send via SMS gateway)
-        otp_seed = f"{phone}{settings.SECRET_KEY}{int(time.time() // 300)}"
-        otp = str(int(hashlib.sha256(otp_seed.encode()).hexdigest(), 16))[-6:]
+    phone = data.get('phone', '').strip()
+    if not phone or len(phone) < 10:
+        return JsonResponse({'status': 'error', 'message': 'Please enter a valid phone number'})
 
-        # Store in session for verification
-        request.session['pending_otp'] = otp
-        request.session['pending_phone'] = phone
+    # Generate a 6-digit OTP
+    otp = str(random.randint(100000, 999999))
 
-        # In production: Send via Twilio/MSG91
-        # For demo: log to console
-        print(f"[Nexus OTP] {phone}: {otp}")
+    # Store in session with 5-minute expiry
+    request.session['pending_otp'] = otp
+    request.session['pending_phone'] = phone
+    request.session['otp_created_at'] = time.time()
 
-        return JsonResponse({'status': 'sent', 'message': 'Verification code sent'})
+    # Try sending via Twilio
+    twilio_sid = getattr(settings, 'TWILIO_ACCOUNT_SID', '')
+    twilio_token = getattr(settings, 'TWILIO_AUTH_TOKEN', '')
+    twilio_service = getattr(settings, 'TWILIO_MESSAGING_SERVICE_SID', '')
 
-    return JsonResponse({'status': 'error'}, status=405)
+    if twilio_sid and twilio_token and twilio_service:
+        try:
+            from twilio.rest import Client
+            client = Client(twilio_sid, twilio_token)
+            message = client.messages.create(
+                messaging_service_sid=twilio_service,
+                to=phone,
+                body=f'Your Nexus Chat verification code is: {otp}. Valid for 5 minutes.',
+            )
+            logger.info(f'[Twilio] SMS sent to {phone}, SID: {message.sid}')
+            return JsonResponse({'status': 'sent', 'message': f'Code sent to {phone}'})
+        except Exception as e:
+            logger.error(f'[Twilio] SMS failed: {e}')
+            return JsonResponse({'status': 'error', 'message': f'SMS delivery failed: {str(e)}'})
+    else:
+        # Fallback: print to console for local dev
+        logger.info(f'[Nexus OTP] {phone}: {otp}')
+        print(f'\n[Nexus OTP] Verification code for {phone}: {otp}\n')
+        return JsonResponse({'status': 'sent', 'message': f'Code sent to {phone} (demo mode)'})
 
 
 @csrf_exempt
 def verify_otp_view(request):
     """Verify OTP and log in / create user."""
-    if request.method == 'POST':
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error'}, status=405)
+
+    try:
         data = json.loads(request.body)
-        otp = data.get('otp', '')
-        phone = data.get('phone', '')
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid request'})
 
-        expected_otp = request.session.get('pending_otp', '')
-        expected_phone = request.session.get('pending_phone', '')
+    otp = data.get('otp', '').strip()
+    phone = data.get('phone', '').strip()
 
-        if otp == expected_otp and phone == expected_phone:
-            # Find or create user by phone
-            username = f'user_{phone[-4:]}'
-            user, created = User.objects.get_or_create(
-                username=username,
-                defaults={'first_name': f'User {phone[-4:]}'}
-            )
-            if created:
-                user.set_unusable_password()
-                user.save()
+    expected_otp = request.session.get('pending_otp', '')
+    expected_phone = request.session.get('pending_phone', '')
+    otp_time = request.session.get('otp_created_at', 0)
 
-            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            del request.session['pending_otp']
-            del request.session['pending_phone']
+    # Check expiry (5 minutes)
+    if time.time() - otp_time > 300:
+        return JsonResponse({'status': 'error', 'message': 'Code expired. Please request a new one.'})
 
-            return JsonResponse({'status': 'verified', 'redirect': '/chat/'})
-
+    if not otp or otp != expected_otp or phone != expected_phone:
         return JsonResponse({'status': 'error', 'message': 'Invalid verification code'})
 
-    return JsonResponse({'status': 'error'}, status=405)
+    # Find or create user by phone number
+    clean_phone = phone.replace('+', '').replace(' ', '').replace('-', '')
+    username = f'phone_{clean_phone[-10:]}'
+
+    # Check if user with this phone exists (stored in profile)
+    profile = UserProfile.objects.filter(phone_number=phone).first()
+    if profile:
+        user = profile.user
+    else:
+        user, created = User.objects.get_or_create(
+            username=username,
+            defaults={'first_name': f'User {clean_phone[-4:]}'}
+        )
+        if created:
+            user.set_unusable_password()
+            user.save()
+        # Save phone to profile
+        user.profile.phone_number = phone
+        user.profile.save()
+
+    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    user.profile.is_online = True
+    user.profile.save()
+
+    # Clear session OTP data
+    for key in ['pending_otp', 'pending_phone', 'otp_created_at']:
+        request.session.pop(key, None)
+
+    return JsonResponse({'status': 'verified', 'redirect': '/chat/'})
 
 
 @login_required
