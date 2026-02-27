@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% block title %}Chat - Nexus Chat Web{% endblock %}
+{% block body %}
+<div class="chat-app" id="chatApp" data-user="{{ request.user.username }}" data-user-id="{{ request.user.id }}" {% if active_conversation %}data-conversation-id="{{ active_conversation.id }}"{% endif %}>
+
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-user">
+                <img src="{{ request.user.profile.avatar_url }}" alt="" class="sidebar-avatar">
+                <div>
+                    <h3>{{ request.user.get_full_name|default:request.user.username }}</h3>
+                    <span class="status-online-text">Online</span>
+                </div>
+            </div>
+            <div class="sidebar-actions">
+                <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme" id="themeToggleBtn">
+                    <span class="material-icons-round">dark_mode</span>
+                </button>
+                <a href="/accounts/profile/" class="icon-btn" title="Profile">
+                    <span class="material-icons-round">settings</span>
+                </a>
+                <a href="/accounts/logout/" class="icon-btn" title="Logout">
+                    <span class="material-icons-round">logout</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="sidebar-search">
+            <span class="material-icons-round">search</span>
+            <input type="text" placeholder="Search chats..." id="chatSearchInput" autocomplete="off">
+        </div>
+
+        <div class="sidebar-quick-actions">
+            <a href="/accounts/search/" class="quick-action-btn">
+                <span class="material-icons-round">person_add</span>
+                <span>Find People</span>
+            </a>
+            <a href="/chat/archived/" class="quick-action-btn">
+                <span class="material-icons-round">archive</span>
+                <span>Archived</span>
+            </a>
+        </div>
+
+        <div class="conversation-list" id="conversationList">
+            {% for conv in conversations %}
+            {% with other=conv.participants.all %}
+            <a href="/chat/{{ conv.id }}/"
+                class="conversation-item {% if active_conversation and active_conversation.id == conv.id %}active{% endif %}"
+                data-id="{{ conv.id }}">
+                <div class="conv-avatar-wrap">
+                    {% for p in other %}
+                    {% if p.id != request.user.id %}
+                    <img src="{{ p.profile.avatar_url }}" alt="{{ p.username }}" class="conv-avatar">
+                    <span class="status-dot {% if p.profile.is_online %}online{% endif %}"></span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="conv-info">
+                    <div class="conv-top-row">
+                        <h4 class="conv-name">
+                            {% for p in other %}
+                            {% if p.id != request.user.id %}{{ p.get_full_name|default:p.username }}{% endif %}
+                            {% endfor %}
+                        </h4>
+                        {% if conv.last_message %}
+                        <span class="conv-time">{{ conv.last_message.timestamp|timesince }} ago</span>
+                        {% endif %}
+                    </div>
+                    <div class="conv-bottom-row">
+                        <p class="conv-preview">
+                            {% if conv.last_message %}
+                            {% if conv.last_message.is_deleted %}<em>Message deleted</em>{% else %}{{
+                            conv.last_message.content|truncatechars:45 }}{% endif %}
+                            {% else %}No messages yet{% endif %}
+                        </p>
+                        {% with unread=conv.unread_count %}
+                        {% if unread %}<span class="unread-badge">{{ unread }}</span>{% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+                {% if conv.is_pinned %}<span class="material-icons-round pin-icon">push_pin</span>{% endif %}
+            </a>
+            {% endwith %}
+            {% empty %}
+            <div class="empty-state sidebar-empty">
+                <span class="material-icons-round">forum</span>
+                <p>No conversations yet</p>
+                <a href="/accounts/search/" class="btn btn-primary btn-sm">Find People</a>
+            </div>
+            {% endfor %}
+        </div>
+    </aside>
+
+    <main class="chat-main" id="chatMain">
+        {% if active_conversation %}
+        <div class="chat-header">
+            <button class="icon-btn mobile-back-btn" onclick="closeChatMobile()">
+                <span class="material-icons-round">arrow_back</span>
+            </button>
+            <a href="/accounts/user/{{ other_user.username }}/" class="chat-header-user">
+                <div class="chat-header-avatar-wrap">
+                    <img src="{{ other_user.profile.avatar_url }}" alt="" class="chat-header-avatar">
+                    <span class="status-dot {% if other_user.profile.is_online %}online{% endif %}"
+                        id="headerStatusDot"></span>
+                </div>
+                <div>
+                    <h3 id="chatHeaderName">{{ other_user.get_full_name|default:other_user.username }}</h3>
+                    <p class="chat-header-status" id="chatHeaderStatus">
+                        {% if other_user.profile.is_online %}Online{% else %}Last seen {{
+                        other_user.profile.last_seen|timesince }} ago{% endif %}
+                    </p>
+                </div>
+            </a>
+            <div class="chat-header-actions">
+                <button class="icon-btn" title="Search messages" onclick="toggleMessageSearch()">
+                    <span class="material-icons-round">search</span>
+                </button>
+                <div class="dropdown">
+                    <button class="icon-btn" title="More options" onclick="toggleDropdown(this)">
+                        <span class="material-icons-round">more_vert</span>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a href="/chat/{{ active_conversation.id }}/pin/" class="dropdown-item"
+                            onclick="event.preventDefault(); fetch(this.href).then(function(){location.reload()})">
+                            <span class="material-icons-round">push_pin</span>
+                            {% if active_conversation.is_pinned %}Unpin{% else %}Pin{% endif %} Chat
+                        </a>
+                        <a href="/chat/{{ active_conversation.id }}/archive/" class="dropdown-item"
+                            onclick="event.preventDefault(); fetch(this.href).then(function(){location.reload()})">
+                            <span class="material-icons-round">archive</span>
+                            Archive Chat
+                        </a>
+                        <a href="/accounts/user/{{ other_user.username }}/" class="dropdown-item">
+                            <span class="material-icons-round">person</span>
+                            View Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="message-search-bar" id="messageSearchBar" style="display:none;">
+            <span class="material-icons-round">search</span>
+            <input type="text" placeholder="Search in conversation..." id="messageSearchInput">
+            <button class="icon-btn" onclick="toggleMessageSearch()">
+                <span class="material-icons-round">close</span>
+            </button>
+        </div>
+
+        <div class="messages-area" id="messagesArea">
+            {% for msg in messages %}
+            <div class="message {% if msg.sender == request.user %}sent{% else %}received{% endif %}"
+                data-msg-id="{{ msg.id }}" data-sender="{{ msg.sender.username }}">
+                {% if msg.sender != request.user %}
+                <img src="{{ msg.sender.profile.avatar_url }}" alt="" class="msg-avatar">
+                {% endif %}
+                <div class="msg-bubble">
+                    {% if msg.is_deleted %}
+                    <p class="msg-deleted"><span class="material-icons-round">block</span> This message was deleted</p>
+                    {% elif msg.message_type == 'image' and msg.media %}
+                    <div class="msg-media"><img src="{{ msg.media.url }}" alt="Image" loading="lazy"
+                            onclick="openMediaViewer(this.src)"></div>
+                    {% elif msg.message_type == 'video' and msg.media %}
+                    <div class="msg-media"><video src="{{ msg.media.url }}" controls></video></div>
+                    {% elif msg.message_type == 'document' and msg.media %}
+                    <a href="{{ msg.media.url }}" class="msg-document" target="_blank"><span
+                            class="material-icons-round">description</span> {{ msg.content|default:"Document" }}</a>
+                    {% elif msg.message_type == 'system' %}
+                    <p class="msg-system">{{ msg.content }}</p>
+                    {% else %}
+                    <p class="msg-text">{{ msg.content }}</p>
+                    {% endif %}
+                    {% if msg.is_edited %}<span class="msg-edited-tag">edited</span>{% endif %}
+                    <div class="msg-meta">
+                        <span class="msg-time">{{ msg.timestamp|date:"g:i A" }}</span>
+                        {% if msg.sender == request.user %}
+                        <span class="msg-status">
+                            {% if msg.is_read %}<span class="material-icons-round read">done_all</span>{% elif
+                            msg.is_delivered %}<span class="material-icons-round">done_all</span>{% else %}<span
+                                class="material-icons-round">done</span>{% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% if not msg.is_deleted and msg.message_type != 'system' %}
+                    <div class="msg-actions">
+                        <button onclick="reactToMessage({{ msg.id }})" title="React"><span
+                                class="material-icons-round">add_reaction</span></button>
+                        {% if msg.sender == request.user %}
+                        <button onclick="editMessage({{ msg.id }})" title="Edit"><span
+                                class="material-icons-round">edit</span></button>
+                        <button onclick="deleteMessage({{ msg.id }})" title="Delete"><span
+                                class="material-icons-round">delete</span></button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% if msg.reactions %}
+                    <div class="msg-reactions">
+                        {% for emoji, users in msg.reactions.items %}
+                        <span class="reaction-chip" onclick="reactToMessage({{ msg.id }}, '{{ emoji }}')">{{ emoji }} {{
+                            users|length }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state chat-empty">
+                <span class="material-icons-round">waving_hand</span>
+                <h3>Start the conversation!</h3>
+                <p>Send a message to begin chatting</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator" style="display:none;">
+            <div class="typing-dots"><span></span><span></span><span></span></div>
+            <span id="typingUser"></span> is typing...
+        </div>
+
+        <div class="message-input-area">
+            <div class="input-toolbar">
+                <button class="icon-btn" id="emojiBtn" title="Emoji" onclick="toggleEmojiPicker()">
+                    <span class="material-icons-round">emoji_emotions</span>
+                </button>
+                <label class="icon-btn" title="Attach file">
+                    <span class="material-icons-round">attach_file</span>
+                    <input type="file" id="mediaInput" style="display:none"
+                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" onchange="uploadMedia(this)">
+                </label>
+            </div>
+            <div class="input-wrapper">
+                <textarea id="messageInput" placeholder="Type a message..." rows="1" onkeydown="handleKeyDown(event)"
+                    oninput="handleTyping()"></textarea>
+            </div>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send">
+                <span class="material-icons-round">send</span>
+            </button>
+        </div>
+
+        <div class="emoji-picker" id="emojiPicker" style="display:none;">
+            <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+
+        {% else %}
+        <div class="no-chat-selected">
+            <div class="no-chat-content">
+                <span class="material-icons-round no-chat-icon">forum</span>
+                <h2>Nexus Chat Web</h2>
+                <p>Select a conversation or find someone new to start chatting</p>
+                <a href="/accounts/search/" class="btn btn-primary">
+                    <span class="material-icons-round">person_add</span> Find People
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </main>
+</div>
+
+<div class="media-viewer" id="mediaViewer" style="display:none;" onclick="closeMediaViewer()">
+    <button class="media-viewer-close"><span class="material-icons-round">close</span></button>
+    <img src="" alt="Media" id="mediaViewerImg">
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/chat.js"></script>
+{% endblock %}

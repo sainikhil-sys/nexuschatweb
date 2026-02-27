@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Sign Up — Nexus Chat Web{% endblock %}
+
+{% block body %}
+<div class="auth-page">
+    <div class="auth-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <div class="auth-container animate-fade-in-up">
+        <div class="auth-card glass-card">
+            <div class="auth-header">
+                <a href="/" class="auth-logo">
+                    <span class="material-icons-round">hub</span>
+                    <span>Nexus Chat</span>
+                </a>
+                <h1>Create Account</h1>
+                <p>Join Nexus Chat and start connecting</p>
+            </div>
+
+            <form method="post" class="auth-form" autocomplete="off">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                <div class="form-alert form-alert-error animate-shake">
+                    <span class="material-icons-round">error</span>
+                    <div>
+                        {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                        <p>{{ error }}</p>
+                        {% endfor %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="form-group">
+                    <label for="id_username">
+                        <span class="material-icons-round">person</span>
+                        Username
+                    </label>
+                    {{ form.username }}
+                </div>
+
+                <div class="form-group">
+                    <label for="id_email">
+                        <span class="material-icons-round">email</span>
+                        Email
+                    </label>
+                    {{ form.email }}
+                </div>
+
+                <div class="form-group">
+                    <label for="id_password1">
+                        <span class="material-icons-round">lock</span>
+                        Password
+                    </label>
+                    {{ form.password1 }}
+                </div>
+
+                <div class="form-group">
+                    <label for="id_password2">
+                        <span class="material-icons-round">lock_reset</span>
+                        Confirm Password
+                    </label>
+                    {{ form.password2 }}
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">
+                    <span class="material-icons-round">how_to_reg</span>
+                    Create Account
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Already have an account? <a href="/accounts/login/">Sign in</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Search Users — Nexus Chat Web{% endblock %}
+
+{% block body %}
+<div class="auth-page">
+    <div class="auth-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <div class="auth-container animate-fade-in-up">
+        <div class="auth-card glass-card" style="max-width: 550px;">
+            <div class="auth-header">
+                <h1>Find People</h1>
+                <p>Search for users to start chatting</p>
+            </div>
+
+            <form method="get" class="search-bar-form">
+                <div class="search-bar">
+                    <span class="material-icons-round">search</span>
+                    <input type="text" name="q" value="{{ query }}" placeholder="Search by name or username..."
+                        class="form-input" autofocus>
+                </div>
+            </form>
+
+            <div class="search-results">
+                {% for user in users %}
+                <a href="/accounts/user/{{ user.username }}/" class="user-result-card glass-card">
+                    <div class="user-result-avatar">
+                        <img src="{{ user.profile.avatar_url }}" alt="{{ user.username }}">
+                        <span class="status-dot {% if user.profile.is_online %}online{% endif %}"></span>
+                    </div>
+                    <div class="user-result-info">
+                        <h4>{{ user.get_full_name|default:user.username }}</h4>
+                        <p>@{{ user.username }}</p>
+                    </div>
+                    <span class="material-icons-round">arrow_forward_ios</span>
+                </a>
+                {% empty %}
+                {% if query %}
+                <div class="empty-state">
+                    <span class="material-icons-round">person_search</span>
+                    <p>No users found for "{{ query }}"</p>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="auth-footer">
+                <a href="/chat/" class="btn btn-ghost">
+                    <span class="material-icons-round">arrow_back</span>
+                    Back to Chat
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
