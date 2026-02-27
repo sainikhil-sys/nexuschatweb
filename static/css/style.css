@@ -3182,3 +3182,30 @@ p.msg-system {
     max-width: 100% !important;
   }
 }
+
+/* Inline auth alerts */
+.alert {
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  margin-bottom: 12px;
+  font-size: .85rem;
+  animation: fadeIn .3s;
+}
+
+.alert-info {
+  background: rgba(59, 130, 246, .12);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, .25);
+}
+
+.alert-success {
+  background: rgba(16, 185, 129, .12);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, .25);
+}
+
+.alert-error {
+  background: rgba(239, 68, 68, .12);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, .25);
+}

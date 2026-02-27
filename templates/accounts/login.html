@@ -21,7 +21,7 @@
 
             <!-- Social Login Buttons -->
             <div class="social-auth-buttons">
-                <button class="social-btn google-btn" id="googleSignIn" onclick="clerkSignInWith('oauth_google')">
+                <button class="social-btn google-btn" id="googleSignIn" onclick="socialSignIn('oauth_google')">
                     <svg width="20" height="20" viewBox="0 0 24 24">
                         <path
                             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
@@ -38,7 +38,7 @@
                     </svg>
                     Continue with Google
                 </button>
-                <button class="social-btn github-btn" id="githubSignIn" onclick="clerkSignInWith('oauth_github')">
+                <button class="social-btn github-btn" id="githubSignIn" onclick="socialSignIn('oauth_github')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                         <path
                             d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
@@ -155,117 +155,153 @@
 
 <script>
     // ── Clerk Integration ──
-    const CLERK_PK = '{{ clerk_publishable_key }}';
-
-    // Initialize Clerk if key is available
+    const CLERK_PK = '{{ clerk_publishable_key|default:"" }}';
+    let clerkLoaded = false;
     let clerkInstance = null;
-    if (CLERK_PK) {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
-        script.async = true;
-        script.onload = async () => {
-            clerkInstance = new window.Clerk(CLERK_PK);
-            await clerkInstance.load();
-            console.log('[Nexus] Clerk loaded');
+
+    if (CLERK_PK && CLERK_PK.length > 5) {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        s.crossOrigin = 'anonymous';
+        s.async = true;
+        s.onload = async () => {
+            try {
+                clerkInstance = new window.Clerk(CLERK_PK);
+                await clerkInstance.load();
+                clerkLoaded = true;
+                console.log('[Nexus] Clerk loaded successfully');
+            } catch (e) {
+                console.error('[Nexus] Clerk init error:', e);
+            }
         };
-        document.head.appendChild(script);
+        s.onerror = () => console.error('[Nexus] Failed to load Clerk SDK');
+        document.head.appendChild(s);
     }
 
-    async function clerkSignInWith(strategy) {
-        if (!clerkInstance) {
-            alert('Clerk authentication is being configured. Please set your CLERK_PUBLISHABLE_KEY environment variable, then try again.');
+    async function socialSignIn(strategy) {
+        if (!CLERK_PK || CLERK_PK.length < 5) {
+            // No Clerk key — show friendly message
+            showAuthMessage('Social login will be available soon. Please use email/password or phone to sign in.', 'info');
+            return;
+        }
+        if (!clerkLoaded) {
+            showAuthMessage('Loading authentication... Please wait a moment and try again.', 'info');
             return;
         }
         try {
-            await clerkInstance.client.signIn.create({
+            await clerkInstance.client.signIn.authenticateWithRedirect({
                 strategy: strategy,
                 redirectUrl: '/accounts/clerk/callback/',
+                redirectUrlComplete: '/chat/',
             });
         } catch (e) {
-            console.error('[Nexus] Clerk sign-in error:', e);
-            alert('Sign-in failed. Please try again.');
+            console.error('[Nexus] OAuth error:', e);
+            showAuthMessage('Sign-in failed: ' + (e.errors?.[0]?.message || e.message || 'Unknown error'), 'error');
         }
     }
 
     // ── Phone OTP ──
-    let phoneSignIn = null;
-
     async function sendPhoneOTP() {
         const code = document.getElementById('countryCode').value;
         const phone = document.getElementById('phoneNumber').value.trim();
-        if (!phone) { alert('Please enter your phone number.'); return; }
+        if (!phone) { showAuthMessage('Please enter your phone number.', 'error'); return; }
 
-        if (clerkInstance) {
+        if (clerkLoaded) {
             try {
-                phoneSignIn = await clerkInstance.client.signIn.create({
-                    identifier: code + phone,
-                    strategy: 'phone_code',
-                });
-                document.getElementById('phoneStep').querySelector('.btn').textContent = 'Code Sent!';
-                document.getElementById('otpStep').style.display = 'block';
-            } catch (e) {
-                console.error('[Nexus] Phone OTP error:', e);
-                alert('Could not send verification code. Please check the number.');
-            }
-        } else {
-            // Fallback: Django-based OTP
-            try {
-                const resp = await fetch('/accounts/send-otp/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
-                    body: JSON.stringify({ phone: code + phone })
-                });
-                const data = await resp.json();
-                if (data.status === 'sent') {
+                const si = await clerkInstance.client.signIn.create({ identifier: code + phone });
+                const phoneFactor = si.supportedFirstFactors.find(f => f.strategy === 'phone_code');
+                if (phoneFactor) {
+                    await si.prepareFirstFactor({ strategy: 'phone_code', phoneNumberId: phoneFactor.phoneNumberId });
                     document.getElementById('otpStep').style.display = 'block';
+                    showAuthMessage('Verification code sent to ' + code + phone, 'success');
                 } else {
-                    alert(data.message || 'Failed to send OTP');
+                    showAuthMessage('Phone login not available for this account. Try email instead.', 'error');
                 }
             } catch (e) {
-                // Demo mode - just show OTP field
-                document.getElementById('otpStep').style.display = 'block';
+                // Fallback to Django OTP
+                djangoSendOTP(code + phone);
             }
+        } else {
+            djangoSendOTP(code + phone);
+        }
+    }
+
+    async function djangoSendOTP(fullPhone) {
+        try {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            const resp = await fetch('/accounts/send-otp/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ phone: fullPhone })
+            });
+            const data = await resp.json();
+            if (data.status === 'sent') {
+                document.getElementById('otpStep').style.display = 'block';
+                showAuthMessage('Verification code sent!', 'success');
+            } else {
+                showAuthMessage(data.message || 'Failed to send code', 'error');
+            }
+        } catch (e) {
+            document.getElementById('otpStep').style.display = 'block';
+            showAuthMessage('Enter the verification code sent to your phone.', 'info');
         }
     }
 
     async function verifyPhoneOTP() {
         const boxes = document.querySelectorAll('.otp-box');
         const otp = Array.from(boxes).map(b => b.value).join('');
-        if (otp.length !== 6) { alert('Please enter the full 6-digit code.'); return; }
+        if (otp.length !== 6) { showAuthMessage('Please enter the full 6-digit code.', 'error'); return; }
 
-        if (clerkInstance && phoneSignIn) {
+        if (clerkLoaded) {
             try {
-                const result = await phoneSignIn.attemptFirstFactor({
+                const result = await clerkInstance.client.signIn.attemptFirstFactor({
                     strategy: 'phone_code',
                     code: otp,
                 });
                 if (result.status === 'complete') {
+                    await clerkInstance.setActive({ session: result.createdSessionId });
                     window.location.href = '/chat/';
                 }
             } catch (e) {
-                alert('Invalid verification code. Please try again.');
+                showAuthMessage('Invalid code. Please try again.', 'error');
             }
         } else {
-            // Fallback: Django-based verification
+            // Django OTP verification
             try {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
                 const resp = await fetch('/accounts/verify-otp/', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                     body: JSON.stringify({ otp: otp, phone: document.getElementById('countryCode').value + document.getElementById('phoneNumber').value.trim() })
                 });
                 const data = await resp.json();
                 if (data.status === 'verified') {
                     window.location.href = data.redirect || '/chat/';
                 } else {
-                    alert(data.message || 'Invalid code');
+                    showAuthMessage(data.message || 'Invalid code', 'error');
                 }
             } catch (e) {
-                alert('Verification failed. Please try again.');
+                showAuthMessage('Verification failed. Please try again.', 'error');
             }
         }
     }
 
-    // ── OTP Box Auto-focus ──
+    // ── UI Helpers ──
+    function showAuthMessage(msg, type) {
+        let el = document.getElementById('authAlertMsg');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'authAlertMsg';
+            const card = document.querySelector('.auth-card');
+            card.insertBefore(el, card.querySelector('.social-auth-buttons'));
+        }
+        el.className = 'alert alert-' + type;
+        el.textContent = msg;
+        el.style.display = 'block';
+        if (type !== 'error') setTimeout(() => el.style.display = 'none', 5000);
+    }
+
+    // ── OTP Auto-focus ──
     document.querySelectorAll('.otp-box').forEach((box, i, boxes) => {
         box.addEventListener('input', () => {
             if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
