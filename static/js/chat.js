@@ -47,15 +47,15 @@
 
     function handleSocketMessage(data) {
         switch (data.type) {
-            case 'chat_message':
-                appendMessage(data);
+            case 'message':
+                appendMessage(data.message);
                 scrollToBottom();
-                if (data.sender !== username) {
-                    showNotification(data.sender, data.content);
+                if (data.message.sender !== username) {
+                    showNotification(data.message.sender, data.message.content);
                 }
                 break;
             case 'typing':
-                showTyping(data.sender);
+                showTyping(data.username);
                 break;
             case 'read_receipt':
                 markMessagesRead(data);
@@ -63,13 +63,13 @@
             case 'reaction':
                 updateReaction(data);
                 break;
-            case 'message_edit':
+            case 'edited':
                 editMessageDOM(data);
                 break;
-            case 'message_delete':
+            case 'deleted':
                 deleteMessageDOM(data);
                 break;
-            case 'user_status':
+            case 'status':
                 updateUserStatus(data);
                 break;
         }
@@ -121,7 +121,7 @@
         if (!content) return;
 
         chatSocket.send(JSON.stringify({
-            type: 'chat_message',
+            type: 'message',
             content: content,
         }));
 
@@ -176,7 +176,7 @@
         const newContent = prompt('Edit message:', msgEl.textContent);
         if (newContent !== null && newContent.trim()) {
             chatSocket.send(JSON.stringify({
-                type: 'edit_message',
+                type: 'edit',
                 message_id: msgId,
                 content: newContent.trim(),
             }));
@@ -187,7 +187,7 @@
         if (!chatSocket) return;
         if (confirm('Delete this message?')) {
             chatSocket.send(JSON.stringify({
-                type: 'delete_message',
+                type: 'delete',
                 message_id: msgId,
             }));
         }
