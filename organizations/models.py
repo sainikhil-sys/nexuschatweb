@@ -98,7 +98,7 @@ class OrganizationMembership(models.Model):
 
     class Meta:
         unique_together = ('organization', 'user')
-        ordering = ['role', 'joined_at']
+        ordering = ['-joined_at']
 
 
 class Invitation(models.Model):

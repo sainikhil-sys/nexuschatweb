@@ -66,7 +66,7 @@ def select_org(request):
     """Let user pick their active organization."""
     memberships = OrganizationMembership.objects.filter(
         user=request.user, is_active=True
-    ).select_related('organization')
+    )
 
     if request.method == 'POST':
         org_id = request.POST.get('org_id')
@@ -135,13 +135,13 @@ def dashboard(request):
     ).count()
 
     # Recent members
-    recent_members = org.memberships.filter(is_active=True).select_related('user', 'user__profile').order_by('-joined_at')[:10]
+    recent_members = org.memberships.filter(is_active=True).order_by('-joined_at')[:10]
 
     # Pending invitations
     pending_invites = org.invitations.filter(accepted=False).order_by('-created_at')[:10]
 
     # Recent audit logs
-    recent_logs = org.audit_logs.select_related('user').order_by('-timestamp')[:20]
+    recent_logs = org.audit_logs.order_by('-timestamp')[:20]
 
     # Messages per day (last 7 days) for chart
     daily_messages = []
@@ -199,7 +199,7 @@ def org_settings(request):
 def manage_members(request):
     """View and manage organization members."""
     org = request.organization
-    members = org.memberships.filter(is_active=True).select_related('user', 'user__profile')
+    members = org.memberships.filter(is_active=True)
 
     if request.method == 'POST':
         action = request.POST.get('action')

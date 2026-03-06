@@ -4,6 +4,9 @@ Shared configuration for development and production.
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -15,11 +18,6 @@ SECRET_KEY = os.environ.get(
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-
-# ── Clerk Authentication ────────────────────────────────────────────────────
-CLERK_PUBLISHABLE_KEY = os.environ.get('CLERK_PUBLISHABLE_KEY', '')
-CLERK_SECRET_KEY = os.environ.get('CLERK_SECRET_KEY', '')
-CLERK_WEBHOOK_SECRET = os.environ.get('CLERK_WEBHOOK_SECRET', '')
 
 # ── Twilio SMS Verification ─────────────────────────────────────────────────
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
@@ -35,10 +33,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     # Third-party
     'rest_framework',
     'corsheaders',
     'channels',
+    # django-allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.github',
     # Project apps
     'accounts.apps.AccountsConfig',
     'chat.apps.ChatConfig',
@@ -47,6 +52,8 @@ INSTALLED_APPS = [
     'discovery',
     'organizations',
 ]
+
+SITE_ID = 1
 
 # ── Middleware ───────────────────────────────────────────────────────────────
 MIDDLEWARE = [
@@ -84,6 +91,44 @@ TEMPLATES = [
 WSGI_APPLICATION = 'nexus_chat.wsgi.application'
 ASGI_APPLICATION = 'nexus_chat.asgi.application'
 
+# ── Authentication ──────────────────────────────────────────────────────────
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/chat/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+# ── django-allauth Configuration ────────────────────────────────────────────
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_EMAIL_REQUIRED = False
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_SIGNUP_REDIRECT_URL = '/chat/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
+            'secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+        },
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+    },
+    'github': {
+        'APP': {
+            'client_id': os.environ.get('GITHUB_CLIENT_ID', ''),
+            'secret': os.environ.get('GITHUB_CLIENT_SECRET', ''),
+        },
+        'SCOPE': ['user:email'],
+    },
+}
+
 # ── Password Validation ─────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -107,11 +152,6 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# ── Authentication ──────────────────────────────────────────────────────────
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/chat/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # ── REST Framework ──────────────────────────────────────────────────────────
 REST_FRAMEWORK = {

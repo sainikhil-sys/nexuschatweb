@@ -11,7 +11,7 @@ from .serializers import UserSerializer, ConversationSerializer, MessageSerializ
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = User.objects.select_related('profile').all()
+    queryset = User.objects.all()
     serializer_class = UserSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['username', 'first_name', 'last_name']
@@ -33,9 +33,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def messages(self, request, pk=None):
         conversation = self.get_object()
-        messages = conversation.messages.select_related(
-            'sender', 'sender__profile'
-        ).order_by('-timestamp')[:100]
+        messages = conversation.messages.all().order_by('-timestamp')[:100]
         serializer = MessageSerializer(messages, many=True)
         return Response(serializer.data)
 
@@ -48,7 +46,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Message.objects.filter(
             conversation__participants=self.request.user
-        ).select_related('sender', 'sender__profile')
+        )
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)

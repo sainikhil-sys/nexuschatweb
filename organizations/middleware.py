@@ -35,9 +35,8 @@ class OrganizationMiddleware:
                 try:
                     org = Organization.objects.get(id=org_id, is_active=True)
                     # Verify user is a member
-                    if OrganizationMembership.objects.filter(
-                        organization=org, user=request.user, is_active=True
-                    ).exists():
+                    mem = OrganizationMembership.objects.filter(organization=org, user=request.user).first()
+                    if mem and mem.is_active:
                         request.organization = org
                 except Organization.DoesNotExist:
                     del request.session['active_org_id']
@@ -45,9 +44,8 @@ class OrganizationMiddleware:
             # If no org set and user has memberships, auto-set the first one
             if not request.organization:
                 from organizations.models import OrganizationMembership
-                membership = OrganizationMembership.objects.filter(
-                    user=request.user, is_active=True
-                ).select_related('organization').first()
+                memberships = OrganizationMembership.objects.filter(user=request.user)
+                membership = next((m for m in memberships if m.is_active), None)
                 if membership:
                     request.organization = membership.organization
                     request.session['active_org_id'] = membership.organization.id

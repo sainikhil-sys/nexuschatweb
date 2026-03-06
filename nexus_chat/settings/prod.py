@@ -1,8 +1,8 @@
 """
-Nexus Chat Web - Production Settings (Render)
+Nexus Chat Web — Production Settings
+Uses MongoDB Atlas or production MongoDB instance.
 """
 import os
-import dj_database_url
 from .base import *  # noqa: F401,F403
 
 DEBUG = False
@@ -11,30 +11,33 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '.onrender.com').split(',')
 if '*' not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.extend(['localhost', '127.0.0.1', '192.168.*.*', '10.0.*.*'])
-# -- Database (Render provides DATABASE_URL) --
+    ALLOWED_HOSTS.extend(['localhost', '127.0.0.1'])
+
+# ── MongoDB Database ─────────────────────────────────────────
+MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/nexus_chat')
+
 DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:///db.sqlite3',
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+    'default': {
+        'ENGINE': 'djongo',
+        'NAME': 'nexus_chat',
+        'CLIENT': {
+            'host': MONGODB_URI,
+        }
+    }
 }
 
-# -- Channel Layer --
-# Use in-memory for free tier (no Redis).
-# If you add a Redis addon, switch to channels_redis.
+# ── Channel Layer ─────────────────────────────────────────────
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
     }
 }
 
-# -- Static Files (WhiteNoise) --
+# ── Static Files (WhiteNoise) ─────────────────────────────────
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# -- Security --
+# ── Security ──────────────────────────────────────────────────
 SECURE_SSL_REDIRECT = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SESSION_COOKIE_SECURE = True

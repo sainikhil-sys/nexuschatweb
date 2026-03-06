@@ -28,14 +28,13 @@ def register_view(request):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             messages.success(request, 'Welcome to Nexus Chat!')
             return redirect('chat:chat_home')
     else:
         form = RegisterForm()
     return render(request, 'accounts/register.html', {
         'form': form,
-        'clerk_publishable_key': settings.CLERK_PUBLISHABLE_KEY,
     })
 
 
@@ -46,7 +45,7 @@ def login_view(request):
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             user.profile.is_online = True
             user.profile.save()
             return redirect('chat:chat_home')
@@ -54,7 +53,6 @@ def login_view(request):
         form = LoginForm()
     return render(request, 'accounts/login.html', {
         'form': form,
-        'clerk_publishable_key': settings.CLERK_PUBLISHABLE_KEY,
     })
 
 

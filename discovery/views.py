@@ -80,7 +80,7 @@ def heartbeat(request):
     active_devices = NearbyDevice.objects.filter(
         ip_address__startswith=subnet,
         last_active__gte=cutoff
-    ).exclude(user=request.user).select_related('user', 'user__profile')
+    ).exclude(user=request.user)
     
     devices = []
     for d in active_devices:

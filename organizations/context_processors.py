@@ -22,6 +22,6 @@ def organization_context(request):
         from organizations.models import OrganizationMembership
         ctx['user_organizations'] = OrganizationMembership.objects.filter(
             user=request.user, is_active=True
-        ).select_related('organization')[:10]
+        )[:10]
 
     return ctx

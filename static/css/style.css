@@ -9,17 +9,24 @@
 :root {
   --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-  /* Accent */
-  --accent: #6366f1;
-  --accent-light: #818cf8;
-  --accent-dark: #4f46e5;
-  --accent-glow: rgba(99, 102, 241, .35);
+  /* Accent — Vibrant Neon */
+  --accent: #7c3aed;
+  --accent-light: #a78bfa;
+  --accent-dark: #5b21b6;
+  --accent-glow: rgba(124, 58, 237, .45);
+  --neon-blue: #00d4ff;
+  --neon-pink: #ff006e;
+  --neon-green: #00ff87;
+  --neon-purple: #7c3aed;
+  --gradient-primary: linear-gradient(135deg, #7c3aed, #00d4ff);
+  --gradient-secondary: linear-gradient(135deg, #ff006e, #ff9500);
+  --gradient-accent: linear-gradient(135deg, #00d4ff, #00ff87);
 
   /* Status colors */
-  --online: #22c55e;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --success: #10b981;
+  --online: #00ff87;
+  --danger: #ff4757;
+  --warning: #ffa502;
+  --success: #00ff87;
 
   /* Radius */
   --r-sm: 8px;
@@ -37,40 +44,40 @@
 
 /* ── Dark Theme (default) ────────────────────────────────── */
 [data-theme="dark"] {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #12121a;
-  --bg-tertiary: #1a1a26;
-  --bg-hover: #22222e;
-  --glass-bg: rgba(20, 20, 32, .7);
-  --glass-border: rgba(255, 255, 255, .08);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, .4);
-  --text-primary: #f0f0f5;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
-  --border: rgba(255, 255, 255, .06);
-  --msg-sent: rgba(99, 102, 241, .18);
-  --msg-received: rgba(255, 255, 255, .05);
-  --input-bg: rgba(255, 255, 255, .06);
-  --scrollbar: rgba(255, 255, 255, .1);
+  --bg-primary: #080810;
+  --bg-secondary: #0e0e1a;
+  --bg-tertiary: #161625;
+  --bg-hover: #1e1e32;
+  --glass-bg: rgba(14, 14, 26, .85);
+  --glass-border: rgba(124, 58, 237, .15);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, .5);
+  --text-primary: #f0f0ff;
+  --text-secondary: #a0a0c0;
+  --text-muted: #6b6b8a;
+  --border: rgba(124, 58, 237, .08);
+  --msg-sent: rgba(124, 58, 237, .2);
+  --msg-received: rgba(0, 212, 255, .06);
+  --input-bg: rgba(124, 58, 237, .08);
+  --scrollbar: rgba(124, 58, 237, .15);
 }
 
 /* ── Light Theme ─────────────────────────────────────────── */
 [data-theme="light"] {
-  --bg-primary: #f5f5fa;
+  --bg-primary: #f0f0ff;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #eeeef5;
-  --bg-hover: #e5e5f0;
-  --glass-bg: rgba(255, 255, 255, .75);
-  --glass-border: rgba(0, 0, 0, .08);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, .1);
-  --text-primary: #111118;
-  --text-secondary: #4b5563;
-  --text-muted: #9ca3af;
-  --border: rgba(0, 0, 0, .06);
-  --msg-sent: rgba(99, 102, 241, .12);
-  --msg-received: rgba(0, 0, 0, .04);
-  --input-bg: rgba(0, 0, 0, .04);
-  --scrollbar: rgba(0, 0, 0, .12);
+  --bg-tertiary: #eeeeff;
+  --bg-hover: #e0e0f5;
+  --glass-bg: rgba(255, 255, 255, .8);
+  --glass-border: rgba(124, 58, 237, .12);
+  --glass-shadow: 0 8px 32px rgba(124, 58, 237, .1);
+  --text-primary: #0e0e1a;
+  --text-secondary: #4b4b6b;
+  --text-muted: #8b8ba0;
+  --border: rgba(124, 58, 237, .08);
+  --msg-sent: rgba(124, 58, 237, .12);
+  --msg-received: rgba(0, 212, 255, .06);
+  --input-bg: rgba(124, 58, 237, .05);
+  --scrollbar: rgba(124, 58, 237, .12);
 }
 
 /* ── Reset ───────────────────────────────────────────────── */
@@ -3208,4 +3215,279 @@ p.msg-system {
   background: rgba(239, 68, 68, .12);
   color: #fca5a5;
   border: 1px solid rgba(239, 68, 68, .25);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   VIBRANT UI ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════ */
+
+/* Gradient text utility */
+.gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Auth Side Panel (desktop illustration) ─────────────── */
+.auth-side-panel {
+  padding: 40px;
+}
+
+.auth-illustration {
+  text-align: center;
+}
+
+.auth-ill-icon {
+  font-size: 5rem !important;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: block;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 0 30px rgba(124, 58, 237, .4));
+}
+
+.auth-illustration h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.auth-illustration p {
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 380px;
+  margin: 0 auto 28px;
+}
+
+.auth-features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.auth-feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  transition: all var(--t-fast);
+}
+
+.auth-feature:hover {
+  border-color: var(--accent);
+  transform: translateX(6px);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.auth-feature .material-icons-round {
+  color: var(--neon-blue);
+  font-size: 1.3rem;
+}
+
+.auth-feature span:last-child {
+  font-size: .9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* ── Enhanced Glass Card ─────────────────────────────────── */
+.glass-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.glass-card:hover {
+  box-shadow: var(--glass-shadow), 0 0 40px rgba(124, 58, 237, .08);
+}
+
+/* ── Enhanced Buttons ────────────────────────────────────── */
+.btn-primary {
+  background: var(--gradient-primary) !important;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(255, 255, 255, .15), transparent);
+  transform: translateX(-100%);
+  transition: transform .5s ease;
+}
+
+.btn-primary:hover::before {
+  transform: translateX(100%);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 4px 25px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+/* ── Enhanced Send Button ────────────────────────────────── */
+.send-btn {
+  background: var(--gradient-primary) !important;
+}
+
+.send-btn:hover {
+  box-shadow: 0 4px 20px var(--accent-glow);
+}
+
+/* ── Enhanced Inputs ─────────────────────────────────────── */
+.form-input:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-glow), 0 0 15px rgba(124, 58, 237, .15) !important;
+}
+
+/* ── Enhanced Orbs (Auth Background) ─────────────────────── */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: .4;
+  animation: orbFloat 8s ease-in-out infinite alternate;
+}
+
+.orb-1 {
+  width: 400px;
+  height: 400px;
+  background: var(--neon-purple);
+  top: -100px;
+  right: -100px;
+}
+
+.orb-2 {
+  width: 350px;
+  height: 350px;
+  background: var(--neon-blue);
+  bottom: -80px;
+  left: -80px;
+  animation-delay: -4s;
+}
+
+@keyframes orbFloat {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+
+  to {
+    transform: translate(30px, -20px) scale(1.08);
+  }
+}
+
+/* ── Enhanced Social Auth Buttons ────────────────────────── */
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  font-size: .88rem;
+  transition: all var(--t-fast);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.google-btn {
+  background: rgba(66, 133, 244, .1);
+}
+
+.google-btn:hover {
+  background: rgba(66, 133, 244, .2);
+  border-color: rgba(66, 133, 244, .4);
+  transform: translateY(-1px);
+  color: var(--text-primary);
+}
+
+.github-btn {
+  background: rgba(255, 255, 255, .05);
+}
+
+.github-btn:hover {
+  background: rgba(255, 255, 255, .1);
+  border-color: rgba(255, 255, 255, .2);
+  transform: translateY(-1px);
+  color: var(--text-primary);
+}
+
+/* ── Enhanced Online Status ──────────────────────────────── */
+.status-dot.online {
+  background: var(--neon-green);
+  box-shadow: 0 0 8px var(--neon-green);
+}
+
+/* ── Neon Sidebar Accent ─────────────────────────────────── */
+.sidebar {
+  border-right-color: rgba(124, 58, 237, .15) !important;
+  position: relative;
+}
+
+.conversation-item.active {
+  background: rgba(124, 58, 237, .12);
+  border-left: 3px solid var(--accent);
+}
+
+/* ── Enhanced Unread Badge ───────────────────────────────── */
+.unread-badge {
+  background: var(--gradient-secondary);
+  box-shadow: 0 2px 8px rgba(255, 0, 110, .3);
+}
+
+/* ── Message Bubble Enhancements ─────────────────────────── */
+.message.sent .msg-bubble {
+  background: rgba(124, 58, 237, .15);
+  border: 1px solid rgba(124, 58, 237, .1);
+}
+
+.message.received .msg-bubble {
+  background: rgba(0, 212, 255, .06);
+  border: 1px solid rgba(0, 212, 255, .06);
+}
+
+/* ── Form Alert Success ──────────────────────────────────── */
+.form-alert-success {
+  background: rgba(0, 255, 135, .1);
+  border: 1px solid rgba(0, 255, 135, .2);
+  color: var(--neon-green);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  margin-bottom: 16px;
+}
+
+.form-alert-success .material-icons-round {
+  color: var(--neon-green);
+}
+
+/* ── Bootstrap Override – Dark theme fixes ────────────────── */
+.text-secondary {
+  color: var(--text-secondary) !important;
+}
+
+/* Ensure Bootstrap doesn't override our dark backgrounds */
+body,
+.container,
+.row {
+  color: var(--text-primary);
 }

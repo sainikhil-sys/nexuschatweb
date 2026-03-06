@@ -13,18 +13,14 @@ from .models import Conversation, Message
 @login_required
 def chat_home(request):
     qs = Conversation.objects.filter(
-        participants=request.user,
-        is_archived=False
+        participants=request.user
     )
     # Org-scope filtering
     org = getattr(request, 'organization', None)
     if org:
         qs = qs.filter(organization=org)
 
-    conversations = qs.annotate(
-        last_msg_time=Max('messages__timestamp'),
-        msg_count=Count('messages')
-    ).order_by('-is_pinned', '-last_msg_time')
+    conversations = [c for c in qs.order_by('-updated_at') if not c.is_archived]
 
     return render(request, 'chat/chat.html', {
         'conversations': conversations,
@@ -40,7 +36,7 @@ def conversation_view(request, conversation_id):
         qs = qs.filter(organization=org)
 
     conversation = get_object_or_404(qs, id=conversation_id)
-    messages_qs = conversation.messages.select_related('sender', 'sender__profile').order_by('timestamp')
+    messages_qs = conversation.messages.order_by('timestamp')
 
     # Mark messages as read
     messages_qs.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
@@ -49,15 +45,12 @@ def conversation_view(request, conversation_id):
     other_user = conversation.participants.exclude(id=request.user.id).first()
 
     conv_qs = Conversation.objects.filter(
-        participants=request.user,
-        is_archived=False
+        participants=request.user
     )
     if org:
         conv_qs = conv_qs.filter(organization=org)
 
-    conversations = conv_qs.annotate(
-        last_msg_time=Max('messages__timestamp')
-    ).order_by('-is_pinned', '-last_msg_time')
+    conversations = [c for c in conv_qs.order_by('-updated_at') if not c.is_archived]
 
     return render(request, 'chat/chat.html', {
         'conversations': conversations,
@@ -167,7 +160,7 @@ def search_messages(request):
             conversation__participants=request.user,
             content__icontains=query,
             is_deleted=False,
-        ).select_related('sender', 'conversation').order_by('-timestamp')[:30]
+        ).order_by('-timestamp')[:30]
     if request.headers.get('Accept') == 'application/json':
         data = [msg.to_json() for msg in results]
         return JsonResponse({'messages': data})
@@ -206,7 +199,7 @@ def nearby_api(request):
     online_profiles = UserProfile.objects.filter(
         is_online=True,
         last_seen__gte=cutoff,
-    ).exclude(user=request.user).select_related('user')
+    ).exclude(user=request.user)
 
     devices = []
     for profile in online_profiles:

@@ -5,13 +5,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.views.generic import TemplateView
 from chat.views import nearby_api
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
     path('accounts/', include('accounts.urls')),
+    path('accounts/social/', include('allauth.urls')),
     path('chat/', include('chat.urls')),
     path('api/', include('api.urls')),
     path('api/nearby/', nearby_api, name='nearby_api'),

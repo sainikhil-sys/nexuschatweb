@@ -1,183 +1,534 @@
 {% extends 'base.html' %}
-{% block title %}{{ org_name }} — Secure Enterprise Communication Platform{% endblock %}
+{% block title %}{{ org_name|default:'Nexus Chat' }} — Secure Team Communication{% endblock %}
+
+{% block extra_css %}
+<style>
+    .landing-hero {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        padding: 80px 0 60px;
+    }
+
+    .landing-hero .auth-bg {
+        z-index: 0;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 10;
+    }
+
+    .hero-title {
+        font-size: clamp(2.2rem, 5vw, 3.8rem);
+        font-weight: 800;
+        line-height: 1.15;
+        margin-bottom: 20px;
+    }
+
+    .hero-subtitle {
+        font-size: clamp(1rem, 2vw, 1.25rem);
+        color: var(--text-secondary);
+        max-width: 540px;
+        margin-bottom: 36px;
+        line-height: 1.7;
+    }
+
+    .hero-cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 50px;
+    }
+
+    .hero-cta {
+        padding: 14px 32px;
+        border-radius: var(--r-full);
+        font-weight: 700;
+        font-size: 1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        transition: all var(--t-fast);
+    }
+
+    .hero-cta-primary {
+        background: var(--gradient-primary);
+        color: #fff;
+    }
+
+    .hero-cta-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px var(--accent-glow);
+        color: #fff;
+    }
+
+    .hero-cta-secondary {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        color: var(--text-primary);
+        backdrop-filter: blur(10px);
+    }
+
+    .hero-cta-secondary:hover {
+        border-color: var(--accent);
+        color: var(--text-primary);
+        transform: translateY(-2px);
+    }
+
+    /* Stats section */
+    .stats-section {
+        padding: 60px 0;
+        position: relative;
+        z-index: 10;
+    }
+
+    .stat-box {
+        text-align: center;
+        padding: 30px 20px;
+        border-radius: var(--r-xl);
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(10px);
+        transition: all var(--t-fast);
+    }
+
+    .stat-box:hover {
+        border-color: var(--accent);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px var(--accent-glow);
+    }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: .9rem;
+        margin-top: 4px;
+    }
+
+    /* Features section */
+    .features-section {
+        padding: 80px 0;
+    }
+
+    .section-title {
+        text-align: center;
+        margin-bottom: 50px;
+    }
+
+    .section-title h2 {
+        font-size: clamp(1.5rem, 3vw, 2.2rem);
+        font-weight: 800;
+        margin-bottom: 12px;
+    }
+
+    .section-title p {
+        color: var(--text-secondary);
+        font-size: 1.05rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .feature-card {
+        padding: 30px;
+        border-radius: var(--r-xl);
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(10px);
+        height: 100%;
+        transition: all var(--t-fast);
+    }
+
+    .feature-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px var(--accent-glow);
+    }
+
+    .feature-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: var(--r-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 18px;
+        font-size: 1.6rem;
+    }
+
+    .feature-icon.purple {
+        background: rgba(124, 58, 237, .15);
+        color: var(--neon-purple);
+    }
+
+    .feature-icon.blue {
+        background: rgba(0, 212, 255, .15);
+        color: var(--neon-blue);
+    }
+
+    .feature-icon.pink {
+        background: rgba(255, 0, 110, .15);
+        color: var(--neon-pink);
+    }
+
+    .feature-icon.green {
+        background: rgba(0, 255, 135, .15);
+        color: var(--neon-green);
+    }
+
+    .feature-card h3 {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .feature-card p {
+        color: var(--text-secondary);
+        font-size: .9rem;
+        line-height: 1.6;
+    }
+
+    /* CTA section */
+    .cta-section {
+        padding: 80px 0;
+        text-align: center;
+    }
+
+    .cta-box {
+        padding: 60px 40px;
+        border-radius: var(--r-xl);
+        background: var(--gradient-primary);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cta-box::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at top right, rgba(0, 212, 255, .3), transparent);
+    }
+
+    .cta-box h2 {
+        font-size: clamp(1.5rem, 3vw, 2rem);
+        font-weight: 800;
+        color: #fff;
+        position: relative;
+        z-index: 1;
+        margin-bottom: 12px;
+    }
+
+    .cta-box p {
+        color: rgba(255, 255, 255, .85);
+        font-size: 1.05rem;
+        position: relative;
+        z-index: 1;
+        margin-bottom: 28px;
+    }
+
+    .cta-box .hero-cta {
+        position: relative;
+        z-index: 1;
+        background: #fff;
+        color: var(--accent-dark);
+    }
+
+    .cta-box .hero-cta:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, .3);
+        color: var(--accent-dark);
+    }
+
+    /* Footer */
+    .landing-footer {
+        padding: 30px 0;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: .85rem;
+        border-top: 1px solid var(--border);
+    }
+
+    /* Nav */
+    .landing-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        padding: 16px 0;
+        background: rgba(8, 8, 16, .85);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text-primary);
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 1.15rem;
+    }
+
+    .nav-logo .material-icons-round {
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 1.5rem;
+    }
+
+    .nav-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .nav-link-btn {
+        color: var(--text-secondary);
+        text-decoration: none;
+        padding: 8px 16px;
+        border-radius: var(--r-full);
+        font-weight: 500;
+        font-size: .9rem;
+        transition: all var(--t-fast);
+    }
+
+    .nav-link-btn:hover {
+        color: var(--text-primary);
+        background: var(--bg-hover);
+    }
+
+    .nav-cta {
+        background: var(--gradient-primary);
+        color: #fff;
+        padding: 8px 20px;
+        border-radius: var(--r-full);
+        font-weight: 600;
+        font-size: .9rem;
+        text-decoration: none;
+        transition: all var(--t-fast);
+    }
+
+    .nav-cta:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px var(--accent-glow);
+        color: #fff;
+    }
+
+    /* Responsive hero preview */
+    .hero-preview-img {
+        max-width: 100%;
+        border-radius: var(--r-xl);
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, .4);
+    }
+</style>
+{% endblock %}
 
 {% block body %}
-<div class="landing-page">
-    <!-- Animated background -->
-    <div class="landing-bg">
+<!-- Navigation -->
+<nav class="landing-nav">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="/" class="nav-logo">
+                <span class="material-icons-round">hub</span>
+                {{ org_name|default:'Nexus Chat' }}
+            </a>
+            <div class="nav-actions d-none d-sm-flex">
+                <a href="/accounts/login/" class="nav-link-btn">Sign In</a>
+                <a href="/accounts/register/" class="nav-cta">Get Started</a>
+            </div>
+            <div class="d-sm-none">
+                <a href="/accounts/login/" class="nav-cta">Sign In</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="landing-hero">
+    <div class="auth-bg">
         <div class="orb orb-1"></div>
         <div class="orb orb-2"></div>
-        <div class="orb orb-3"></div>
     </div>
+    <div class="container hero-content">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-5 mb-lg-0">
+                <h1 class="hero-title">
+                    <span class="gradient-text">Connect.</span><br>
+                    <span class="gradient-text">Collaborate.</span><br>
+                    Communicate.
+                </h1>
+                <p class="hero-subtitle">
+                    The next-generation chat platform for teams. Real-time messaging, file sharing, and QR discovery —
+                    all works offline on your local network.
+                </p>
+                <div class="hero-cta-row">
+                    <a href="/accounts/register/" class="hero-cta hero-cta-primary">
+                        <span class="material-icons-round">rocket_launch</span>
+                        Get Started Free
+                    </a>
+                    <a href="/accounts/login/" class="hero-cta hero-cta-secondary">
+                        <span class="material-icons-round">login</span>
+                        Sign In
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6 d-none d-lg-block text-center">
+                <div
+                    style="padding: 40px; background: var(--glass-bg); border-radius: var(--r-xl); border: 1px solid var(--glass-border); backdrop-filter: blur(10px);">
+                    <span class="material-icons-round"
+                        style="font-size: 8rem; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">forum</span>
+                    <p style="color: var(--text-secondary); margin-top: 16px;">Secure real-time messaging for your team
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
-    <nav class="landing-nav">
-        <div class="landing-logo">
-            <span class="material-icons-round">hub</span>
-            <span class="logo-text">{{ org_name }}</span>
+<!-- Stats Section -->
+<section class="stats-section">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-6 col-md-3">
+                <div class="stat-box">
+                    <div class="stat-number" data-count="500">0</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-box">
+                    <div class="stat-number" data-count="10000">0</div>
+                    <div class="stat-label">Messages Sent</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-box">
+                    <div class="stat-number" data-count="50">0</div>
+                    <div class="stat-label">Organizations</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-box">
+                    <div class="stat-number" data-count="99">0</div>
+                    <div class="stat-label">Uptime %</div>
+                </div>
+            </div>
         </div>
-        <div class="landing-nav-links">
-            <a href="/accounts/login/" class="btn btn-ghost">Sign In</a>
-            <a href="/accounts/register/" class="btn btn-primary">Get Started</a>
-        </div>
-    </nav>
+    </div>
+</section>
 
-    <main class="landing-hero">
-        <div class="hero-badge animate-fade-in">
-            <span class="material-icons-round">verified</span>
-            Enterprise Communication Platform
+<!-- Features Section -->
+<section class="features-section">
+    <div class="container">
+        <div class="section-title">
+            <h2><span class="gradient-text">Powerful Features</span></h2>
+            <p>Everything you need for seamless team communication, built for security and performance.</p>
         </div>
-        <h1 class="hero-title animate-fade-in-up">
-            Communicate<br>
-            <span class="gradient-text">Without Limits</span>
-        </h1>
-        <p class="hero-subtitle animate-fade-in-up delay-1">
-            A secure, multi-tenant communication platform for organizations,
-            colleges, and teams. Online and offline. Cloud or on-premise.
-        </p>
-        <div class="hero-actions animate-fade-in-up delay-2">
-            <a href="/org/register/" class="btn btn-primary btn-lg">
-                <span class="material-icons-round">business</span>
-                Create Organization
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon purple">
+                        <span class="material-icons-round">bolt</span>
+                    </div>
+                    <h3>Real-Time Chat</h3>
+                    <p>Instant messaging with WebSocket technology. See typing indicators, read receipts, and reactions
+                        live.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon blue">
+                        <span class="material-icons-round">wifi_off</span>
+                    </div>
+                    <h3>Works Offline</h3>
+                    <p>Full functionality on your local network without internet. Perfect for LAN environments.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon pink">
+                        <span class="material-icons-round">attach_file</span>
+                    </div>
+                    <h3>File Sharing</h3>
+                    <p>Share images, videos, documents, and files directly in chat. All stored locally.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon green">
+                        <span class="material-icons-round">qr_code</span>
+                    </div>
+                    <h3>QR Discovery</h3>
+                    <p>Connect with nearby users instantly by scanning QR codes or discovering them on your network.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container">
+        <div class="cta-box">
+            <h2>Ready to transform your team communication?</h2>
+            <p>Join thousands of teams already using Nexus Chat for secure, offline-capable messaging.</p>
+            <a href="/accounts/register/" class="hero-cta">
+                <span class="material-icons-round">rocket_launch</span>
+                Create Free Account
             </a>
-            <a href="/accounts/register/" class="btn btn-ghost btn-lg">
-                <span class="material-icons-round">person_add</span>
-                Join as User
-            </a>
-            <a href="#features" class="btn btn-ghost btn-lg">
-                <span class="material-icons-round">explore</span>
-                Explore Features
-            </a>
         </div>
+    </div>
+</section>
 
-        <!-- Feature preview cards -->
-        <div class="hero-preview animate-fade-in-up delay-3">
-            <div class="preview-card glass-card">
-                <div class="preview-icon"><span class="material-icons-round">domain</span></div>
-                <h3>Multi-Tenant</h3>
-                <p>Isolated workspaces for each organization with full data separation</p>
-            </div>
-            <div class="preview-card glass-card">
-                <div class="preview-icon"><span class="material-icons-round">wifi</span></div>
-                <h3>Nearby Mode</h3>
-                <p>LAN-based communication — works without internet on local networks</p>
-            </div>
-            <div class="preview-card glass-card">
-                <div class="preview-icon"><span class="material-icons-round">admin_panel_settings</span></div>
-                <h3>Admin Dashboard</h3>
-                <p>Analytics, user management, branding, and feature controls</p>
-            </div>
-            <div class="preview-card glass-card">
-                <div class="preview-icon"><span class="material-icons-round">palette</span></div>
-                <h3>White-Label</h3>
-                <p>Custom logos, colors, and branding for each organization</p>
-            </div>
-        </div>
-    </main>
+<!-- Footer -->
+<footer class="landing-footer">
+    <div class="container">
+        <p>&copy; 2026 {{ org_name|default:'Nexus Chat' }}. Built with ❤️ for teams everywhere.</p>
+    </div>
+</footer>
 
-    <!-- Use Cases Section -->
-    <section class="landing-features" style="margin-top: 60px;">
-        <h2 class="section-title">Built For Every Organization</h2>
-        <div class="features-grid">
-            <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">school</span>
-                <h3>Colleges & Universities</h3>
-                <p>Department channels, student-faculty messaging, campus-wide announcements</p>
-            </div>
-            <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">business</span>
-                <h3>Companies & Startups</h3>
-                <p>Team collaboration, project channels, secure file sharing for businesses</p>
-            </div>
-            <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">groups</span>
-                <h3>Coaching Institutes</h3>
-                <p>Batch communication, doubt resolution, resource sharing for educators</p>
-            </div>
-            <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">event</span>
-                <h3>Events & Conferences</h3>
-                <p>Nearby discovery for attendees, instant networking, real-time coordination</p>
-            </div>
-            <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">health_and_safety</span>
-                <h3>Healthcare & NGOs</h3>
-                <p>HIPAA-friendly architecture, on-premise hosting, data privacy compliance</p>
-            </div>
-            <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">apartment</span>
-                <h3>Government & Enterprises</h3>
-                <p>Air-gapped LAN support, audit logging, role-based access controls</p>
-            </div>
-        </div>
-    </section>
+<script>
+    // Animated stat counter
+    function animateCounters() {
+        document.querySelectorAll('.stat-number[data-count]').forEach(el => {
+            const target = parseInt(el.dataset.count);
+            const duration = 2000;
+            const startTime = performance.now();
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.floor(target * eased).toLocaleString() + (el.dataset.count === '99' ? '%' : '+');
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        });
+    }
 
-    <section id="features" class="landing-features">
-        <h2 class="section-title">Platform Features</h2>
-        <div class="features-grid">
-            <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">mark_chat_read</span>
-                <h3>Real-Time Messaging</h3>
-                <p>WebSocket-powered instant messaging with typing indicators and read receipts</p>
-            </div>
-            <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">radar</span>
-                <h3>Nearby Discovery</h3>
-                <p>Auto-detect and connect with devices on the same network without internet</p>
-            </div>
-            <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">qr_code_scanner</span>
-                <h3>QR Pairing</h3>
-                <p>Scan QR codes to instantly pair with nearby devices for secure chat</p>
-            </div>
-            <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">analytics</span>
-                <h3>Admin Analytics</h3>
-                <p>Message volume charts, user engagement, storage usage dashboards</p>
-            </div>
-            <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">security</span>
-                <h3>Role-Based Access</h3>
-                <p>Owner, Admin, Moderator, and Member roles with granular permissions</p>
-            </div>
-            <div class="feature-item glass-card">
-                <span class="material-icons-round feature-icon">brush</span>
-                <h3>Custom Branding</h3>
-                <p>Upload logos, set theme colors, and customize the app name per organization</p>
-            </div>
-        </div>
-    </section>
+    // Trigger counter when stats section is visible
+    const statsObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                animateCounters();
+                statsObserver.disconnect();
+            }
+        });
+    }, { threshold: 0.3 });
 
-    <!-- Pricing Section -->
-    <section class="landing-features">
-        <h2 class="section-title">Simple Pricing</h2>
-        <div class="features-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-            <div class="feature-item glass-card" style="text-align: center; padding: 36px 24px;">
-                <span class="badge badge-free" style="margin-bottom: 12px;">Free</span>
-                <h3 style="font-size: 1.8rem; margin: 12px 0;">₹0<span
-                        style="font-size: .8rem; color: var(--text-muted);">/month</span></h3>
-                <p>Up to 25 users<br>500 MB storage<br>Basic features<br>Community support</p>
-                <a href="/org/register/" class="btn btn-ghost" style="margin-top: 16px;">Start Free</a>
-            </div>
-            <div class="feature-item glass-card"
-                style="text-align: center; padding: 36px 24px; border: 2px solid var(--accent);">
-                <span class="badge badge-pro" style="margin-bottom: 12px;">Pro</span>
-                <h3 style="font-size: 1.8rem; margin: 12px 0;">₹999<span
-                        style="font-size: .8rem; color: var(--text-muted);">/month</span></h3>
-                <p>Up to 200 users<br>10 GB storage<br>Nearby Mode + QR<br>Priority support</p>
-                <a href="/org/register/" class="btn btn-primary" style="margin-top: 16px;">Get Pro</a>
-            </div>
-            <div class="feature-item glass-card" style="text-align: center; padding: 36px 24px;">
-                <span class="badge badge-enterprise" style="margin-bottom: 12px;">Enterprise</span>
-                <h3 style="font-size: 1.8rem; margin: 12px 0;">Custom<span
-                        style="font-size: .8rem; color: var(--text-muted);"> pricing</span></h3>
-                <p>Unlimited users<br>Unlimited storage<br>On-premise hosting<br>Dedicated support</p>
-                <a href="mailto:contact@nexuschat.io" class="btn btn-ghost" style="margin-top: 16px;">Contact Sales</a>
-            </div>
-        </div>
-    </section>
-
-    <footer class="landing-footer">
-        <p>&copy; 2026 {{ org_name }}. Enterprise Communication Platform. Built with Django & Channels.</p>
-    </footer>
-</div>
+    const statsSection = document.querySelector('.stats-section');
+    if (statsSection) statsObserver.observe(statsSection);
+</script>
 {% endblock %}
