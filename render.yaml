@@ -26,12 +26,16 @@ services:
         fromDatabase:
           name: nexus-chat-db
           property: connectionString
-      - key: CLERK_PUBLISHABLE_KEY
+      - key: GOOGLE_CLIENT_ID
         sync: false
-      - key: CLERK_SECRET_KEY
+      - key: GOOGLE_CLIENT_SECRET
         sync: false
-      - key: CLERK_WEBHOOK_SECRET
+      - key: GITHUB_CLIENT_ID
         sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_AUTH_TOKEN

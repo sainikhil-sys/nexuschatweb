@@ -13,17 +13,14 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '.onrender.com').split(',')
 if '*' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.extend(['localhost', '127.0.0.1'])
 
-# ── MongoDB Database ─────────────────────────────────────────
-MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/nexus_chat')
+import dj_database_url
 
+# ── PostgreSQL Database (Render) ─────────────────────────────
 DATABASES = {
-    'default': {
-        'ENGINE': 'djongo',
-        'NAME': 'nexus_chat',
-        'CLIENT': {
-            'host': MONGODB_URI,
-        }
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
+        conn_max_age=600
+    )
 }
 
 # ── Channel Layer ─────────────────────────────────────────────
