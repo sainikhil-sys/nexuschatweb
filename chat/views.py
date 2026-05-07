@@ -90,14 +90,6 @@ def start_conversation(request, user_id):
     conversation = Conversation.objects.create(organization=org)
     conversation.participants.add(request.user, other_user)
 
-    # System message
-    Message.objects.create(
-        conversation=conversation,
-        sender=request.user,
-        content=f'Conversation started with {other_user.username}',
-        message_type='system',
-    )
-
     return redirect('chat:conversation', conversation_id=conversation.id)
 
 
@@ -231,3 +223,68 @@ def archived_chats(request):
         last_msg_time=Max('messages__timestamp')
     ).order_by('-last_msg_time')
     return render(request, 'chat/archived.html', {'conversations': conversations})
+@login_required
+def send_message_http(request, conversation_id):
+    """Fallback for sending messages via HTTP when WebSockets are unavailable."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    conversation = get_object_or_404(
+        Conversation.objects.filter(participants=request.user),
+        id=conversation_id
+    )
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        content = data.get('content', '').strip()
+    except:
+        content = request.POST.get('content', '').strip()
+        
+    if not content:
+        return JsonResponse({'error': 'Empty message'}, status=400)
+    
+    message = Message.objects.create(
+        conversation=conversation,
+        sender=request.user,
+        content=content,
+        message_type='text'
+    )
+    
+    # Update conversation timestamp
+    from django.utils import timezone
+    conversation.updated_at = timezone.now()
+    conversation.save(update_fields=['updated_at'])
+    
+    # Broadcast via WS if possible
+    try:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'chat_{conversation_id}',
+            {'type': 'chat_message', 'message': message.to_json()}
+        )
+    except:
+        pass
+
+    return JsonResponse(message.to_json())
+
+
+@login_required
+def get_messages_http(request, conversation_id):
+    """Fallback for fetching new messages via HTTP polling."""
+    conversation = get_object_or_404(
+        Conversation.objects.filter(participants=request.user),
+        id=conversation_id
+    )
+    
+    after_id = request.GET.get('after_id')
+    messages_qs = conversation.messages.all()
+    
+    if after_id:
+        messages_qs = messages_qs.filter(id__gt=after_id)
+    
+    # Also mark as read
+    messages_qs.exclude(sender=request.user).update(is_read=True)
+    
+    data = [msg.to_json() for msg in messages_qs]
+    return JsonResponse({'messages': data})

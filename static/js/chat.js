@@ -60,7 +60,37 @@
 
         chatSocket.onerror = (err) => {
             console.error('[Nexus] Chat WebSocket error:', err);
+            // Switch to HTTP polling if WebSocket fails
+            startHttpPolling();
         };
+    }
+
+    function startHttpPolling() {
+        if (!conversationId) return;
+        if (window.pollingInterval) return;
+        console.log('[Nexus] Starting HTTP polling fallback...');
+        window.pollingInterval = setInterval(pollMessages, 5000);
+    }
+
+    async function pollMessages() {
+        if (!conversationId) return;
+        const lastMsg = messagesArea.querySelector('.message:last-child');
+        const lastId = lastMsg ? lastMsg.dataset.msgId : null;
+        let url = `/chat/${conversationId}/messages-http/`;
+        if (lastId) url += `?after_id=${lastId}`;
+
+        try {
+            const resp = await fetch(url);
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(appendMessage);
+                    scrollToBottom();
+                }
+            }
+        } catch (e) {
+            console.warn('[Nexus] HTTP polling failed');
+        }
     }
 
     function handleSocketMessage(data) {
@@ -239,15 +269,42 @@
     }
 
     // ──── Send Message ───────────────────────────────────────────────
-    window.sendMessage = function () {
-        if (!chatSocket || !messageInput) return;
+    window.sendMessage = async function () {
+        if (!messageInput) return;
         const content = messageInput.value.trim();
         if (!content) return;
 
-        chatSocket.send(JSON.stringify({
-            type: 'message',
-            content: content,
-        }));
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({
+                type: 'message',
+                content: content,
+            }));
+        } else {
+            // Fallback to HTTP POST
+            try {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                    || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+                const resp = await fetch(`/chat/${conversationId}/send-http/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ content: content })
+                });
+
+                if (resp.ok) {
+                    const data = await resp.json();
+                    appendMessage(data);
+                    scrollToBottom();
+                    // Also start polling if not already
+                    startHttpPolling();
+                }
+            } catch (e) {
+                console.error('[Nexus] HTTP send failed', e);
+            }
+        }
 
         messageInput.value = '';
         messageInput.style.height = 'auto';
@@ -609,8 +666,17 @@
         connectWebSocket();
         connectPresenceSocket();
         
-        // Initial fallback check
+        // Initial fallback check for nearby
         setTimeout(pollNearbyFallback, 2000);
+
+        // If in a conversation, check if WebSocket is working, otherwise fallback to polling
+        if (conversationId) {
+            setTimeout(() => {
+                if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) {
+                    startHttpPolling();
+                }
+            }, 3000);
+        }
     }
 
     init();
