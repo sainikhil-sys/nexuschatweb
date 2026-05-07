@@ -1,6 +1,6 @@
 # Nexus Chat Web 🚀
 
-**Live App:** https://nexus-chat-web.onrender.com
+**Live App:** https://nexuschatweb-main.vercel.app/
 
 A modern, real-time chat platform built with **Django**, **Django Channels**, and a premium **glassmorphism UI**. Nexus Chat Web provides WebSocket-powered messaging, presence tracking, media sharing, emoji reactions, and a responsive 3-panel chat interface designed for production-quality performance and user experience.
 
