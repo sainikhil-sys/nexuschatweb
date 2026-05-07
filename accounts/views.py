@@ -10,6 +10,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+from django.db.models import Q
 from .forms import RegisterForm, LoginForm, ProfileForm
 from .models import UserProfile, BlockedUser
 import json
@@ -245,6 +246,32 @@ def unblock_user(request, user_id):
     if request.headers.get('Accept') == 'application/json':
         return JsonResponse({'status': 'unblocked'})
     return redirect('accounts:user_profile', username=User.objects.get(id=user_id).username)
+
+
+@login_required
+def search_users(request):
+    """Search for users by username or full name."""
+    query = request.GET.get('q', '').strip()
+    if not query or len(query) < 2:
+        return JsonResponse({'users': []})
+
+    users_qs = User.objects.filter(
+        Q(username__icontains=query) |
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query)
+    ).exclude(id=request.user.id)[:10]
+
+    results = []
+    for u in users_qs:
+        profile = getattr(u, 'profile', None)
+        results.append({
+            'id': u.id,
+            'username': u.username,
+            'full_name': u.get_full_name() or u.username,
+            'avatar': profile.avatar_url if profile else '/static/img/default-avatar.svg',
+            'is_online': profile.is_online if profile else False
+        })
+    return JsonResponse({'users': results})
 
 
 # ── JWT Token ────────────────────────────────────────────────────────────────

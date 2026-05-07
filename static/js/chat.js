@@ -124,8 +124,23 @@
         setInterval(() => {
             if (presenceSocket && presenceSocket.readyState === WebSocket.OPEN) {
                 presenceSocket.send(JSON.stringify({ type: 'heartbeat' }));
+            } else {
+                // Fallback to polling if WebSocket is not connected (Vercel)
+                pollNearbyFallback();
             }
         }, 30000);
+    }
+
+    async function pollNearbyFallback() {
+        try {
+            const resp = await fetch('/discovery/heartbeat/');
+            if (resp.ok) {
+                const data = await resp.json();
+                renderNearbyDevices(data.devices);
+            }
+        } catch (e) {
+            console.warn('[Nexus] Nearby polling fallback failed');
+        }
     }
 
     // ──── Nearby Devices Rendering ───────────────────────────────────
@@ -535,12 +550,67 @@
         });
     });
 
+    // ──── User Search ───────────────────────────────────────────────
+    const searchInput = document.getElementById('chatSearchInput');
+    const resultsOverlay = document.getElementById('userSearchResults');
+
+    if (searchInput && resultsOverlay) {
+        searchInput.addEventListener('input', async (e) => {
+            const query = e.target.value.trim();
+            if (query.length < 2) {
+                resultsOverlay.style.display = 'none';
+                return;
+            }
+
+            try {
+                const resp = await fetch(`/accounts/search-users/?q=${encodeURIComponent(query)}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    renderUserSearchResults(data.users);
+                }
+            } catch (e) {
+                console.error('[Nexus] User search failed', e);
+            }
+        });
+
+        // Close search on escape or click outside
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') resultsOverlay.style.display = 'none';
+        });
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !resultsOverlay.contains(e.target)) {
+                resultsOverlay.style.display = 'none';
+            }
+        });
+    }
+
+    function renderUserSearchResults(users) {
+        if (!users || users.length === 0) {
+            resultsOverlay.innerHTML = '<div class="search-no-results">No people found</div>';
+        } else {
+            resultsOverlay.innerHTML = users.map(u => `
+                <div class="search-user-item" onclick="location.href='/chat/start/${u.id}/'">
+                    <img src="${u.avatar}" class="search-avatar" alt="">
+                    <div class="search-user-info">
+                        <h4>${escapeHtml(u.full_name)}</h4>
+                        <span>@${escapeHtml(u.username)}</span>
+                    </div>
+                    <span class="material-icons-round">person_add</span>
+                </div>
+            `).join('');
+        }
+        resultsOverlay.style.display = 'block';
+    }
+
     // ──── Init ───────────────────────────────────────────────────────
     async function init() {
         scrollToBottom();
         await fetchJWT();
         connectWebSocket();
         connectPresenceSocket();
+        
+        // Initial fallback check
+        setTimeout(pollNearbyFallback, 2000);
     }
 
     init();

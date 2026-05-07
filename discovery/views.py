@@ -73,12 +73,11 @@ def heartbeat(request):
     )
     device.save() # Updates last_active
     
-    # Find others on same network subnet
-    subnet = ip.rsplit('.', 1)[0]
+    # Find others on same network (sharing same public IP on Vercel)
     cutoff = timezone.now() - datetime.timedelta(minutes=5)
     
     active_devices = NearbyDevice.objects.filter(
-        ip_address__startswith=subnet,
+        ip_address=ip,
         last_active__gte=cutoff
     ).exclude(user=request.user)
     

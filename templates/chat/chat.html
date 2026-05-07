@@ -28,8 +28,9 @@
 
         <div class="sidebar-search">
             <span class="material-icons-round">search</span>
-            <input type="text" placeholder="Search chats..." id="chatSearchInput" autocomplete="off">
+            <input type="text" placeholder="Search chats or find people..." id="chatSearchInput" autocomplete="off">
         </div>
+        <div class="search-results-overlay" id="userSearchResults" style="display:none;"></div>
 
         <div class="sidebar-quick-actions">
             {% if current_org %}
