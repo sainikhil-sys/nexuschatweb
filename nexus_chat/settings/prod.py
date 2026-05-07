@@ -9,7 +9,7 @@ DEBUG = False
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '.onrender.com').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '.onrender.com,.vercel.app').split(',')
 if '*' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.extend(['localhost', '127.0.0.1'])
 
@@ -32,15 +32,22 @@ CHANNEL_LAYERS = {
 
 # ── Static Files (WhiteNoise) ─────────────────────────────────
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STORAGES = {
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 # ── Security ──────────────────────────────────────────────────
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = False  # Vercel/Render handle SSL at the edge
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 CSRF_TRUSTED_ORIGINS = [
-    f"https://{host.strip()}" for host in ALLOWED_HOSTS if host.strip()
+    f"https://{host.strip()}" for host in ALLOWED_HOSTS if host.strip() and not host.startswith('.')
+] + [
+    'https://*.vercel.app',
+    'https://*.onrender.com',
 ]
