@@ -30,3 +30,5 @@ Thumbs.db
 # Test files
 test_*.py
 test_*.txt
+
+.vercel
