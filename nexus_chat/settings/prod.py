@@ -40,12 +40,28 @@ CHANNEL_LAYERS = {
     }
 }
 
-# ── Static Files ──────────────────────────────────────────────
+# ── Static & Media Files ──────────────────────────────────────
 # On Vercel, static files are served via the @vercel/static build.
 # WhiteNoise is used for Render or other platforms.
 STATICFILES_DIR = os.path.join(BASE_DIR, 'staticfiles')
 if os.path.isdir(STATICFILES_DIR):
     MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+
+# Media storage: Use Cloudinary if configured, otherwise fallback to local (read-only on Vercel!)
+CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL')
+if CLOUDINARY_URL:
+    INSTALLED_APPS.insert(0, 'cloudinary_storage')
+    INSTALLED_APPS.append('cloudinary')
+    
+    STORAGES = {
+        'default': {
+            'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
+else:
     STORAGES = {
         'staticfiles': {
             'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
